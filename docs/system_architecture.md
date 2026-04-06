@@ -1,64 +1,217 @@
 # System Architecture
 
 ## Overview
-The Buy Box (Amazon Visibility) Tracker is built as a microservice tool functioning symmetrically to the rest of the SaaS ecosystem.
+The Buy Box (Amazon Visibility) Tracker is a microservice tool that fits into the existing SaaS platform ecosystem. It follows the exact same architectural patterns as `sd-cohesity`: shared authentication via cookie-based sessions validated against `sd-core-platform`, internal service-to-service API calls for credentials/notifications, and `pg-boss` for background job processing.
 
 ## Tech Stack
-Based on `sd-cohesity`, the stack is built upon:
-- **Language**: TypeScript
-- **Backend Framework**: Node.js + Express
-- **Database**: PostgreSQL
-- **ORM**: Sequelize (Typescript-based)
-- **Job Queue**: `pg-boss` (utilizes PostgreSQL as a queue broker)
-- **Architecture**: Modular Services
+
+| Layer | Technology | Notes |
+|---|---|---|
+| Language | TypeScript | Strict mode, same tsconfig as sd-cohesity |
+| Runtime | Node.js 20+ | LTS version |
+| Framework | Express.js | REST API |
+| Database | PostgreSQL 15+ | Shared instance or dedicated, accessed via Sequelize |
+| ORM | Sequelize v6 (TypeScript) | Paranoid deletes, underscored naming |
+| Job Queue | pg-boss | PostgreSQL-backed, same DB |
+| Auth | Cookie-based (session_id) | Validated against core-platform `/auth/me` |
+| Containerization | Docker + docker-compose | Same pattern as sd-cohesity |
+| Gateway | Nginx | Reverse proxy, same as sd-cohesity |
 
 ## Architecture Blueprint
 
 ```mermaid
 graph TD
-    UI[Frontend Client / React] <--> APIGateway[API Gateway / Auth]
-    
-    APIGateway <--> ExpressAPI[Express.js App]
-    
-    CorePlatform[Core Platform API]
+    User[Browser / React Frontend]
+    Gateway[Nginx Gateway]
+    CorePlatform["sd-core-platform (Shared Auth + Internal APIs)"]
+    AmazonSPAPI[Amazon SP-API]
 
-    subgraph "Microservice App"
-        ExpressAPI --> ControllerLayer
-        ControllerLayer --> ServiceLayer
-        ControllerLayer --> AdminController
-        AdminController -->|Read/Write Configs| SystemConfigsDB[(SystemConfigs)]
-        ServiceLayer --> JobQueueService
-        ServiceLayer --> DB[PostgreSQL DB]
-    end
-    
-    subgraph "Background Workers"
-        JobQueueService --> PGBoss[pg-boss Job Processor]
-        PGBoss --> ScannerService[Scanner / Catalog Checking]
-        PGBoss --> NotificationWorker[Alert / Email / Slack Dispatcher]
-        ScannerService --> DB
-        NotificationWorker --> DB
+    User <-->|Cookie auth| Gateway
+    Gateway <-->|/api/*| ExpressApp
+
+    subgraph "sd-buybox Microservice"
+        ExpressApp[Express.js API Server]
+
+        subgraph "Request Layer"
+            AuthMiddleware["Auth Middleware (validates session via core-platform)"]
+            ExpressApp --> AuthMiddleware
+            AuthMiddleware --> Controllers
+        end
+
+        subgraph "Controllers"
+            VisibilityController["visibility.controller"]
+            ProductController["product.controller"]
+            AlertController["alert.controller"]
+            SettingsController["settings.controller"]
+            AdminController["admin.controller (superuser only)"]
+        end
+
+        subgraph "Service Layer"
+            MetricsService["metrics.service"]
+            ScanService["scan.service"]
+            SchedulerService["scheduler.service"]
+            NotificationService["notification.service"]
+            CatalogService["catalog.service"]
+            ConfigService["config.service"]
+            CorePlatformService["core_platform.service"]
+        end
+
+        subgraph "Data Layer"
+            Models["Sequelize Models"]
+            DB[(PostgreSQL)]
+            Models --> DB
+        end
+
+        Controllers --> MetricsService
+        Controllers --> ScanService
+        Controllers --> ConfigService
+        ScanService --> SchedulerService
+        ScanService --> CatalogService
+        SchedulerService --> JobQueue
+
+        subgraph "Background Workers (pg-boss)"
+            JobQueue["pg-boss Queue"]
+            TickJob["schedule:tick (every minute)"]
+            ScanJob["buybox:account-scan"]
+            CheckJob["buybox:product-check"]
+            AggregateJob["buybox:daily-aggregate"]
+            AlertJob["buybox:alert-dispatch"]
+            CatalogSyncJob["buybox:catalog-sync"]
+        end
+
+        JobQueue --> TickJob
+        JobQueue --> ScanJob
+        JobQueue --> CheckJob
+        JobQueue --> AggregateJob
+        JobQueue --> AlertJob
+        JobQueue --> CatalogSyncJob
+
+        CheckJob -->|Save results| DB
+        AlertJob --> NotificationService
+        AggregateJob -->|Rollup snapshots| DB
     end
 
-    ScannerService -->|1. Fetch Credentials via Internal Route| CorePlatform
-    NotificationWorker -->|Invoke webhooks / emails| CorePlatform
-    ScannerService <-->|2. Check BuyBox via Credentials| AmazonAPI[Amazon SP-API]
+    CorePlatformService -->|Validate sessions, fetch credentials| CorePlatform
+    NotificationService -->|POST /internal/email/send| CorePlatform
+    NotificationService -->|POST /internal/slack/send-to-channel| CorePlatform
+    CheckJob -->|getPricing, catalog API| AmazonSPAPI
+    CatalogSyncJob -->|listCatalogItems, getSalesReport| AmazonSPAPI
 ```
 
-
 ## Directory Structure
-To mimic the existing ecosystem, the backend code will reside in a structured `./src` folder:
-- `controllers/`: Handles incoming HTTP HTTP requests and responses (e.g., `visibility.controller.ts`, `admin.controller.ts`).
-- `services/`: Business logic, metric calculators (`metrics.service.ts`), configuraton polling (`config.service.ts`), and Buy Box determination logic.
-- `models/`: Sequelize model definitions (referencing `database_schema.md`, including `SystemConfig`).
-- `jobs/` or `services/queue/`: Job queue registration and processors for `pg-boss`.
-- `utils/`: Helpers for math calculations and Amazon API client wrappers.
 
-## Data Flow for a Metric Check
-1. Target User's `TrackerSettings` define `Hourly` scans.
-2. `SchedulerService` (`pg-boss` tick function) identifies it's time for the account's scan.
-3. Queue processes the Account ID, querying target active ASINs.
-4. Worker checks ASIN Buy Box statuses over the SP-API/Scraping service.
-5. Worker saves a `BuyBoxSnapshot`.
-6. UI calls the Express API to fetch the Overview Dashboard data.
-7. `MetricsService` sums the historical `BuyBoxSnapshots` and compares them to previous time windows.
-8. API serves JSON response containing aggregated `MissedSales`, `VisibilityRatio`, etc.
+```
+sd-buybox/
+├── backend/
+│   ├── src/
+│   │   ├── app.ts                           # Express app setup
+│   │   ├── server.ts                        # Server bootstrap + pg-boss init
+│   │   ├── config/
+│   │   │   ├── database.ts                  # Sequelize connection
+│   │   │   └── constants.ts                 # Job names, enums, etc.
+│   │   ├── controllers/
+│   │   │   ├── visibility.controller.ts     # Overview dashboard endpoints
+│   │   │   ├── product.controller.ts        # Product list + detail endpoints
+│   │   │   ├── alert.controller.ts          # Alert CRUD + mark-read
+│   │   │   ├── settings.controller.ts       # TrackerConfig CRUD
+│   │   │   └── admin.controller.ts          # SystemConfig management (admin-only)
+│   │   ├── middlewares/
+│   │   │   ├── auth.middleware.ts            # Cookie -> core-platform session validation
+│   │   │   └── admin.middleware.ts           # Superuser check
+│   │   ├── models/
+│   │   │   ├── index.ts                     # Associations + re-exports
+│   │   │   ├── product.ts
+│   │   │   ├── buybox_snapshot.ts
+│   │   │   ├── scan.ts
+│   │   │   ├── alert.ts
+│   │   │   ├── tracker_config.ts
+│   │   │   ├── notification_channel.ts
+│   │   │   ├── daily_visibility_aggregate.ts
+│   │   │   ├── system_config.ts
+│   │   │   └── audit_log.ts
+│   │   ├── services/
+│   │   │   ├── core_platform.service.ts     # Internal API client (credentials, email, slack)
+│   │   │   ├── scan.service.ts              # Orchestrates scans
+│   │   │   ├── buybox_checker.service.ts    # SP-API pricing check + classification
+│   │   │   ├── metrics.service.ts           # Aggregation queries for dashboard
+│   │   │   ├── scheduler.service.ts         # pg-boss tick + next-run calculation
+│   │   │   ├── catalog.service.ts           # SP-API catalog sync
+│   │   │   ├── config.service.ts            # SystemConfig read/write
+│   │   │   ├── notification/
+│   │   │   │   ├── notification.service.ts  # Dispatcher
+│   │   │   │   ├── notification.interface.ts
+│   │   │   │   ├── email.channel.ts         # Calls core-platform /internal/email/send
+│   │   │   │   └── slack.channel.ts         # Calls core-platform /internal/slack/*
+│   │   │   └── job_queue.service.ts         # pg-boss init/shutdown
+│   │   ├── routes/
+│   │   │   ├── index.ts
+│   │   │   ├── visibility.routes.ts
+│   │   │   ├── product.routes.ts
+│   │   │   ├── alert.routes.ts
+│   │   │   ├── settings.routes.ts
+│   │   │   └── admin.routes.ts
+│   │   ├── utils/
+│   │   │   ├── logger.ts
+│   │   │   ├── error.ts
+│   │   │   └── sp_api.client.ts             # Amazon SP-API HTTP wrapper
+│   │   └── types/
+│   │       └── index.ts
+│   ├── migrations/                          # Sequelize CLI migrations
+│   ├── package.json
+│   └── tsconfig.json
+├── frontend/                                # React app (Vite)
+├── gateway/                                 # Nginx config
+├── docker-compose.yml
+├── .env.example
+├── Makefile
+└── docs/
+```
+
+## Core Platform Integration Points
+
+Our microservice communicates with `sd-core-platform` via two mechanisms:
+
+### 1. User-Facing (Session-based)
+For any request from the frontend, the auth middleware forwards the `session_id` cookie:
+```
+GET /auth/me  →  validates session, returns user + memberships
+GET /integrations/accounts  →  list connected Amazon accounts
+GET /billing/  →  check subscription status / plan tier
+```
+
+### 2. Service-to-Service (API Key-based)
+For background workers that have no user session:
+```
+GET  /internal/integrations/accounts/{id}/credentials  →  decrypted SP-API tokens
+POST /internal/email/send                              →  send transactional email
+POST /internal/slack/send-to-channel                   →  send Slack notification
+POST /internal/slack/send-to-user                      →  send Slack DM
+POST /internal/usage/track                             →  track tool usage
+POST /internal/audit-logs                              →  audit trail
+GET  /internal/organizations/{id}/entitlements          →  check ASIN limits
+POST /internal/organizations/{id}/entitlements/consume  →  consume ASIN quota
+```
+
+All service-to-service calls use:
+```
+Headers: X-Service-Key: {INTERNAL_API_KEY}, X-Service-Name: buybox
+```
+
+## Data Flow: End-to-End Scan Cycle
+
+1. **Tick** — `schedule:tick` pg-boss job fires every minute, queries `tracker_configs` for accounts where `next_scheduled_run_at <= now`.
+2. **Account Scan** — For each due account, enqueue `buybox:account-scan`. This checks for active scans (prevents overlap), fetches the product list, and fans out `buybox:product-check` jobs in batches.
+3. **Product Check** — Each job fetches SP-API credentials from core-platform, calls `getCompetitivePricing`, classifies the result, calculates missed sales, and inserts a `buybox_snapshot`.
+4. **Alert Generation** — If a product drops below the visibility threshold or a new competitor appears, an `alert` record is created and a `buybox:alert-dispatch` job is queued.
+5. **Alert Dispatch** — The notification worker checks the org's notification channels and `tracker_config` preferences, then calls core-platform internal routes to send emails and/or Slack messages.
+6. **Daily Aggregation** — A nightly `buybox:daily-aggregate` job rolls up the day's snapshots into `daily_visibility_aggregates` for fast dashboard queries.
+
+## Admin Section
+
+Admin routes are protected by a middleware that checks `is_superuser` on the user object returned from core-platform session validation.
+
+**Admin capabilities:**
+- CRUD on `system_configs` (change cron intervals, marketplace lists, thresholds)
+- View all organizations' scan statuses (for debugging)
+- Trigger manual scans for any account
+- View system health (queue depth, failed jobs, last successful scan per account)
