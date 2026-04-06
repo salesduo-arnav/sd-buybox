@@ -101,7 +101,7 @@ The workhorse. Checks a single product's Buy Box status.
 4. If has_buybox = false:
    a. Run classification logic → loss_reason
    b. Fetch previous snapshot for this product
-   c. Calculate hours_since_last_snapshot
+   c. Derive hours_without_buybox = (now - previous snapshot_at), capped at 48h
    d. Calculate est_missed_sales using product.estimated_daily_units
 5. INSERT into buybox_snapshots
 6. UPDATE scan: increment scanned_products, issues_found
@@ -130,18 +130,16 @@ Delivers notifications for a specific alert.
 
 **Logic:**
 ```
-1. Fetch alert record (includes product info, severity, message)
+1. Fetch alert record (with product join for title/ASIN)
 2. Fetch tracker_config for the integration account
-3. Apply filters:
+3. Apply filter:
    - If critical_alerts_only = true AND severity != 'critical' → skip
-4. Fetch notification_channels for the organization WHERE is_enabled = true
-   AND events array contains the alert_type
-5. For each matching channel:
-   - email:   POST core-platform /internal/email/send
-              { to: channel.config.emails, subject, html }
-   - slack:   POST core-platform /internal/slack/send-to-channel
-              { organization_id, channel: channel.config.channel_id, text, blocks }
-   - webhook: POST to channel.config.url with JSON payload
+4. If email_alerts_enabled:
+   - Resolve recipients: tracker_config.notification_emails ?? org member emails (via core-platform)
+   - POST core-platform /internal/email/send { to, subject, html }
+5. If slack_alerts_enabled:
+   - Resolve channel: tracker_config.slack_channel_id ?? org default (via core-platform)
+   - POST core-platform /internal/slack/send-to-channel { organization_id, channel, text, blocks }
 6. Update alert.is_notified = true
 ```
 
@@ -149,22 +147,17 @@ Delivers notifications for a specific alert.
 
 ---
 
-### 5. `buybox:daily-aggregate` (Recurring — nightly)
+### 5. `buybox:snapshot-cleanup` (Recurring — nightly)
 
-Pre-computes daily rollups for dashboard performance.
+Enforces snapshot retention policy to keep the DB healthy.
 
-**Schedule:** Driven by `daily_aggregation_cron` SystemConfig (default: `0 2 * * *` = 2 AM UTC).
+**Schedule:** Nightly, e.g., `0 2 * * *` (2 AM UTC).
 
 **Logic:**
 ```
-1. For yesterday's date:
-2. For each product that has snapshots from yesterday:
-   a. total_checks = COUNT(snapshots)
-   b. buybox_wins = COUNT(snapshots WHERE has_buybox = true)
-   c. visibility_pct = (buybox_wins / total_checks) × 100
-   d. total_missed_sales = SUM(est_missed_sales WHERE has_buybox = false)
-   e. primary_loss_reason = MODE(loss_reason) — most frequent reason
-3. UPSERT into daily_visibility_aggregates
+1. Read snapshot_retention_days from system_configs (default: 90)
+2. DELETE FROM buybox_snapshots WHERE snapshot_at < now() - interval '{retention} days'
+3. Log count of deleted rows
 ```
 
 **Retry config:** `retryLimit: 2, retryDelay: 300`
@@ -181,7 +174,7 @@ Refreshes product metadata and sales velocity from SP-API.
 ```
 1. For each active integration account:
 2. Fetch SP-API credentials from core-platform
-3. Call listCatalogItems → update product titles, images, categories
+3. Call listCatalogItems → update product titles, images
 4. Fetch Sales & Traffic Report → update estimated_daily_units + average_selling_price
 5. Detect new ASINs → create product records (if tracking_scope = 'all')
 ```

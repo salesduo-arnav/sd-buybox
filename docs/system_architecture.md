@@ -125,10 +125,7 @@ sd-buybox/
 │   │   │   ├── scan.ts
 │   │   │   ├── alert.ts
 │   │   │   ├── tracker_config.ts
-│   │   │   ├── notification_channel.ts
-│   │   │   ├── daily_visibility_aggregate.ts
-│   │   │   ├── system_config.ts
-│   │   │   └── audit_log.ts
+│   │   │   └── system_config.ts
 │   │   ├── services/
 │   │   │   ├── core_platform.service.ts     # Internal API client (credentials, email, slack)
 │   │   │   ├── scan.service.ts              # Orchestrates scans
@@ -203,8 +200,8 @@ Headers: X-Service-Key: {INTERNAL_API_KEY}, X-Service-Name: buybox
 2. **Account Scan** — For each due account, enqueue `buybox:account-scan`. This checks for active scans (prevents overlap), fetches the product list, and fans out `buybox:product-check` jobs in batches.
 3. **Product Check** — Each job fetches SP-API credentials from core-platform, calls `getCompetitivePricing`, classifies the result, calculates missed sales, and inserts a `buybox_snapshot`.
 4. **Alert Generation** — If a product drops below the visibility threshold or a new competitor appears, an `alert` record is created and a `buybox:alert-dispatch` job is queued.
-5. **Alert Dispatch** — The notification worker checks the org's notification channels and `tracker_config` preferences, then calls core-platform internal routes to send emails and/or Slack messages.
-6. **Daily Aggregation** — A nightly `buybox:daily-aggregate` job rolls up the day's snapshots into `daily_visibility_aggregates` for fast dashboard queries.
+5. **Alert Dispatch** — The notification worker checks `tracker_config` preferences (email enabled? slack enabled? critical only?), then calls core-platform internal routes to send emails and/or Slack messages.
+6. **Snapshot Cleanup** — A nightly `buybox:snapshot-cleanup` job deletes snapshots older than the retention threshold to keep the DB lean.
 
 ## Admin Section
 

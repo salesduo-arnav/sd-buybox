@@ -59,7 +59,7 @@ sequenceDiagram
 
     ProductJob->>DB: UPDATE scans SET scanned_products++
 
-    AlertJob->>DB: SELECT alert, tracker_config, notification_channels
+    AlertJob->>DB: SELECT alert, tracker_config
     AlertJob->>Core: POST /internal/email/send
     AlertJob->>Core: POST /internal/slack/send-to-channel
     AlertJob->>DB: UPDATE alert SET is_notified = true
@@ -85,18 +85,15 @@ graph TD
     subgraph "Dispatch (buybox:alert-dispatch)"
         F --> G{Check tracker_config}
         G -->|critical_alerts_only = true<br/>AND severity != critical| H[Skip Notification]
-        G -->|Passes filter| I[Fetch notification_channels]
+        G -->|Passes filter| I{Check Channels}
 
-        I --> J{Channel Type?}
-        J -->|email| K["POST core-platform<br/>/internal/email/send"]
-        J -->|slack| L["POST core-platform<br/>/internal/slack/send-to-channel"]
-        J -->|webhook| M["POST channel.config.url"]
+        I -->|email_alerts_enabled| K["POST core-platform<br/>/internal/email/send"]
+        I -->|slack_alerts_enabled| L["POST core-platform<br/>/internal/slack/send-to-channel"]
     end
 
     subgraph "Delivery"
         K --> N[Email Inbox]
         L --> O[Slack Channel]
-        M --> P[External System]
     end
 ```
 
@@ -113,12 +110,12 @@ flowchart TD
 
     C --> D[metrics.service.getOverview]
 
-    D --> E[(daily_visibility_aggregates)]
-    D --> F[(buybox_snapshots)]
+    D --> E[(buybox_snapshots - current period)]
+    D --> F[(buybox_snapshots - previous period)]
     D --> G[(scans)]
 
-    E -->|AVG visibility_pct per day| H[visibility_trend: point[]]
-    E -->|AVG across all products| I[avg_visibility: 49%]
+    E -->|GROUP BY date, AVG visibility| H[visibility_trend: point[]]
+    E -->|COUNT FILTER has_buybox / COUNT all| I[avg_visibility: 49%]
     F -->|SUM est_missed_sales WHERE has_buybox=false| J[total_missed_sales: $8865]
     F -->|COUNT DISTINCT product_id WHERE has_buybox=false| K[products_affected: 6]
     F -->|GROUP BY loss_reason| L[loss_reasons: pie chart data]
@@ -189,7 +186,7 @@ sequenceDiagram
     MW->>MW: Validate session + check is_superuser
     MW->>API: Authorized
     API->>DB: UPDATE system_configs<br/>SET config_value = 30<br/>WHERE config_key = :key
-    API->>DB: INSERT audit_log<br/>(action: config.updated)
+    API->>API: POST core-platform /internal/audit-logs<br/>(action: config.updated)
     API-->>Admin: 200 OK { updated config }
 ```
 
@@ -201,11 +198,9 @@ sequenceDiagram
 erDiagram
     PRODUCTS ||--o{ BUYBOX_SNAPSHOTS : "has many"
     PRODUCTS ||--o{ ALERTS : "has many"
-    PRODUCTS ||--o{ DAILY_VISIBILITY_AGGREGATES : "has many"
     SCANS ||--o{ BUYBOX_SNAPSHOTS : "produces"
     SCANS ||--o{ ALERTS : "triggers"
     TRACKER_CONFIGS ||--|{ PRODUCTS : "governs tracking of"
-    NOTIFICATION_CHANNELS ||--o{ ALERTS : "delivers"
 
     PRODUCTS {
         uuid id PK
@@ -252,22 +247,6 @@ erDiagram
         varchar update_frequency
         boolean email_alerts_enabled
         boolean slack_alerts_enabled
-    }
-
-    NOTIFICATION_CHANNELS {
-        uuid id PK
-        uuid organization_id
-        varchar channel_type
-        jsonb config
-        jsonb events
-    }
-
-    DAILY_VISIBILITY_AGGREGATES {
-        uuid id PK
-        uuid product_id FK
-        date date
-        decimal visibility_pct
-        decimal total_missed_sales
     }
 
     SYSTEM_CONFIGS {

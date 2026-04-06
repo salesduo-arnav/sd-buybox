@@ -90,7 +90,7 @@ time_weighted_visibility = SUM(duration_with_buybox) / total_period_duration
 
 **Formula (per snapshot where `has_buybox = false`):**
 ```
-hours_without_bb = hours_since_last_snapshot  (stored on the snapshot)
+hours_without_bb = (current snapshot_at - previous snapshot_at) in hours
 missed_units = (estimated_daily_units / 24) × hours_without_bb
 missed_revenue = missed_units × average_selling_price
 ```
@@ -107,7 +107,7 @@ WHERE product_id = ? AND has_buybox = false
 
 **Guard rails:**
 - If `estimated_daily_units < missed_sales_min_velocity` (SystemConfig, default 0.5), skip the calculation — product sells too slowly to estimate meaningfully.
-- If `hours_since_last_snapshot > 48`, cap it at 48 hours — gaps larger than this likely indicate system downtime, not genuine Buy Box loss.
+- If the gap between consecutive snapshots exceeds 48 hours, cap at 48 — larger gaps likely indicate system downtime, not genuine Buy Box loss.
 
 ---
 
@@ -121,16 +121,7 @@ SELECT COUNT(DISTINCT product_id)
 FROM buybox_snapshots
 WHERE organization_id = ?
   AND has_buybox = false
-  AND snapshot_at BETWEEN <period_start> AND <period_end>
-```
-
-Alternatively, using daily aggregates for speed:
-```sql
-SELECT COUNT(DISTINCT product_id)
-FROM daily_visibility_aggregates
-WHERE organization_id = ?
-  AND visibility_pct < 100
-  AND date BETWEEN <start> AND <end>
+  AND snapshot_at BETWEEN <start> AND <end>
 ```
 
 ---
@@ -195,15 +186,16 @@ trend_pct = ((current_value - previous_value) / previous_value) × 100
 
 **What the user sees:** A line chart spanning 14 days on the Overview page.
 
-**Data source:** `daily_visibility_aggregates` table.
+**Data source:** Direct query on `buybox_snapshots` with the `(organization_id, snapshot_at)` index.
 
 ```sql
-SELECT date, AVG(visibility_pct) as avg_visibility
-FROM daily_visibility_aggregates
+SELECT snapshot_at::date AS date,
+       COUNT(*) FILTER (WHERE has_buybox) * 100.0 / COUNT(*) AS avg_visibility
+FROM buybox_snapshots
 WHERE organization_id = ?
-  AND date BETWEEN <start> AND <end>
-GROUP BY date
-ORDER BY date ASC
+  AND snapshot_at BETWEEN <start> AND <end>
+GROUP BY 1
+ORDER BY 1
 ```
 
 Returns an array of `{ date, avg_visibility }` points for the chart.
