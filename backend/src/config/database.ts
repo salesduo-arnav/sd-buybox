@@ -1,0 +1,42 @@
+import { Sequelize } from 'sequelize';
+import dotenv from 'dotenv';
+import path from 'path';
+import Logger from '../utils/logger';
+
+dotenv.config({ path: path.join(__dirname, '../../../.env') });
+
+const isProduction = process.env.NODE_ENV === 'production';
+
+const sequelize = new Sequelize({
+    dialect: 'postgres',
+    host: process.env.PGHOST || 'localhost',
+    port: Number(process.env.PGPORT) || 5434,
+    username: process.env.PGUSER,
+    password: process.env.PGPASSWORD,
+    database: process.env.PGDATABASE,
+    logging: false,
+    ...(isProduction && {
+        dialectOptions: {
+            ssl: {
+                require: true,
+                rejectUnauthorized: false,
+            },
+        },
+    }),
+});
+
+export const connectDB = async () => {
+    try {
+        await sequelize.authenticate();
+        Logger.info('Database connected successfully');
+    } catch (error) {
+        Logger.error('Unable to connect to the database:', error);
+        process.exit(1);
+    }
+};
+
+export const closeDB = async () => {
+    await sequelize.close();
+};
+
+export default sequelize;
