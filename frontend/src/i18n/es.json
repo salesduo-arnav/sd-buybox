@@ -1,0 +1,98 @@
+{
+  "app": {
+    "name": "Buy Box Tracker",
+    "tagline": "Visibilidad en Amazon"
+  },
+  "nav": {
+    "overview": "Resumen",
+    "products": "Productos",
+    "alerts": "Alertas",
+    "settings": "Ajustes"
+  },
+  "landing": {
+    "nav": {
+      "signIn": "Iniciar sesión"
+    },
+    "hero": {
+      "badge": "Hecho para vendedores y marcas en Amazon",
+      "title": "Deja de perder el Buy Box sin enterarte.",
+      "subtitle": "Rastrea la propiedad del Buy Box en cada ASIN, conoce la razón exacta por la que lo perdiste y mide los ingresos que estás dejando sobre la mesa, en tiempo real.",
+      "cta": "Empezar",
+      "learnMore": "Más información",
+      "tagline": "Sin configuración compleja. Conecta tu cuenta de Seller Central o Vendor Central en minutos."
+    },
+    "stats": {
+      "monitoring": "Monitoreo continuo",
+      "alertSpeed": "De pérdida a alerta",
+      "coverage": "De tus ASINs rastreados"
+    },
+    "features": {
+      "title": "Todo lo que necesitas para defender el Buy Box",
+      "subtitle": "Visibilidad, análisis de causa raíz y alertas, diseñados para cómo funciona Amazon realmente.",
+      "visibility": {
+        "title": "Seguimiento de visibilidad",
+        "description": "Monitorea la propiedad del Buy Box en cada ASIN con la frecuencia que necesites: por hora, diaria o en tiempo real."
+      },
+      "revenue": {
+        "title": "Impacto en ingresos",
+        "description": "Cuantifica los dólares que pierdes cada vez que el Buy Box cambia. Convierte un problema abstracto en un número concreto para tu equipo."
+      },
+      "rootCause": {
+        "title": "Análisis de causa raíz",
+        "description": "Sabe exactamente por qué perdiste el Buy Box: vendedor 3P más barato, violación de MAP, canibalización SC vs VC o precio suprimido."
+      },
+      "alerts": {
+        "title": "Alertas inteligentes",
+        "description": "Notificaciones por correo y Slack cuando la visibilidad baje de tus umbrales — detecta problemas en horas, no en semanas."
+      }
+    },
+    "finalCta": {
+      "title": "¿Listo para dejar de perder ventas por el Buy Box?",
+      "subtitle": "Conecta tu cuenta de Amazon y comienza a rastrear la visibilidad en minutos.",
+      "cta": "Empezar"
+    },
+    "footer": {
+      "copyright": "© 2026 SalesDuo. Todos los derechos reservados.",
+      "built": "Buy Box Tracker · Visibilidad en Amazon"
+    }
+  },
+  "buybox": {
+    "overview": {
+      "title": "Resumen de Buy Box",
+      "description": "Visibilidad, ventas perdidas y tendencias de tus productos"
+    },
+    "products": {
+      "title": "Productos",
+      "description": "Visibilidad y razones de pérdida por producto"
+    },
+    "alerts": {
+      "title": "Alertas",
+      "description": "Eventos y notificaciones recientes del Buy Box",
+      "markRead": "Marcar como leído",
+      "markAllRead": "Marcar todos como leídos"
+    },
+    "settings": {
+      "title": "Ajustes",
+      "description": "Configura horario, alcance y notificaciones del rastreador"
+    }
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "loading": "Cargando...",
+    "error": "Ocurrió un error",
+    "success": "Éxito",
+    "noData": "Sin datos disponibles",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "showing": "Mostrando {{from}} a {{to}} de {{total}}",
+    "severity": {
+      "critical": "Crítico",
+      "warning": "Advertencia",
+      "info": "Info"
+    }
+  }
+}

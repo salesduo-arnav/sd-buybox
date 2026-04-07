@@ -1,5 +1,13 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { Toaster as Sonner } from "sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AccountProvider } from "@/contexts/AccountContext";
+import Layout from "@/components/layout/Layout";
+import Landing from "@/pages/Landing";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -10,57 +18,139 @@ const queryClient = new QueryClient({
   },
 });
 
-// Placeholder pages — will be replaced with actual implementations
-function OverviewPage() {
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      const corePlatformUrl =
+        import.meta.env.VITE_CORE_PLATFORM_URL || "http://localhost:3000";
+      window.location.href = `${corePlatformUrl}/login?redirect=${encodeURIComponent(
+        window.location.origin + location.pathname
+      )}&app=buybox`;
+    }
+  }, [isLoading, isAuthenticated, location.pathname]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-muted-foreground">Redirecting to login...</p>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+/**
+ * Placeholder page used by all four foundation routes. Real Buy Box
+ * feature pages (Overview KPIs, Products table, Alerts feed, Settings
+ * form) will replace these as they are built.
+ */
+function PlaceholderPage({ titleKey, descriptionKey }: { titleKey: string; descriptionKey: string }) {
+  const { t } = useTranslation();
   return (
-    <div className="min-h-screen bg-background p-8">
-      <h1 className="text-3xl font-bold text-foreground">Buy Box Tracker</h1>
-      <p className="mt-2 text-muted-foreground">Overview dashboard — coming soon</p>
+    <div>
+      <h1 className="text-3xl font-bold text-foreground">{t(titleKey)}</h1>
+      <p className="mt-2 text-muted-foreground">{t(descriptionKey)}</p>
+      <div className="mt-8 rounded-lg border border-dashed border-border p-12 text-center">
+        <p className="text-sm text-muted-foreground">Coming soon</p>
+      </div>
     </div>
   );
 }
 
-function ProductsPage() {
+function NotFound() {
   return (
-    <div className="min-h-screen bg-background p-8">
-      <h1 className="text-3xl font-bold text-foreground">Products</h1>
-      <p className="mt-2 text-muted-foreground">Product listing — coming soon</p>
+    <div className="flex h-full items-center justify-center">
+      <p className="text-muted-foreground">Page not found</p>
     </div>
   );
 }
 
-function AlertsPage() {
+function AppRoutes() {
   return (
-    <div className="min-h-screen bg-background p-8">
-      <h1 className="text-3xl font-bold text-foreground">Alerts</h1>
-      <p className="mt-2 text-muted-foreground">Alert feed — coming soon</p>
-    </div>
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route
+        path="/overview"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <PlaceholderPage
+                titleKey="buybox.overview.title"
+                descriptionKey="buybox.overview.description"
+              />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/products"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <PlaceholderPage
+                titleKey="buybox.products.title"
+                descriptionKey="buybox.products.description"
+              />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/alerts"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <PlaceholderPage
+                titleKey="buybox.alerts.title"
+                descriptionKey="buybox.alerts.description"
+              />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <PlaceholderPage
+                titleKey="buybox.settings.title"
+                descriptionKey="buybox.settings.description"
+              />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 }
 
-function SettingsPage() {
-  return (
-    <div className="min-h-screen bg-background p-8">
-      <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-      <p className="mt-2 text-muted-foreground">Tracker config — coming soon</p>
-    </div>
-  );
-}
-
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/overview" replace />} />
-          <Route path="/overview" element={<OverviewPage />} />
-          <Route path="/products" element={<ProductsPage />} />
-          <Route path="/alerts" element={<AlertsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Routes>
-      </BrowserRouter>
-    </QueryClientProvider>
-  );
-}
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <AccountProvider>
+        <TooltipProvider>
+          <Sonner />
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </AccountProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+);
 
 export default App;

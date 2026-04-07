@@ -1,0 +1,98 @@
+{
+  "app": {
+    "name": "Buy Box Tracker",
+    "tagline": "Amazon Visibility"
+  },
+  "nav": {
+    "overview": "Overview",
+    "products": "Products",
+    "alerts": "Alerts",
+    "settings": "Settings"
+  },
+  "landing": {
+    "nav": {
+      "signIn": "Sign in"
+    },
+    "hero": {
+      "badge": "Built for Amazon sellers and brands",
+      "title": "Stop losing the Buy Box without knowing.",
+      "subtitle": "Track Buy Box ownership across every ASIN, get the exact reason you lost it, and see the revenue you're leaving on the table — in real time.",
+      "cta": "Get started",
+      "learnMore": "Learn more",
+      "tagline": "No setup required. Connect your Seller Central or Vendor Central account in minutes."
+    },
+    "stats": {
+      "monitoring": "Continuous monitoring",
+      "alertSpeed": "From loss to alert",
+      "coverage": "Of your tracked ASINs"
+    },
+    "features": {
+      "title": "Everything you need to defend the Buy Box",
+      "subtitle": "Visibility, root-cause analysis, and alerts — purpose-built for the way Amazon really works.",
+      "visibility": {
+        "title": "Visibility tracking",
+        "description": "Monitor Buy Box ownership across every ASIN on a schedule that fits your operation — hourly, daily, or real-time."
+      },
+      "revenue": {
+        "title": "Revenue impact",
+        "description": "Quantify the dollars you're losing every time the Buy Box flips. Turn an abstract problem into a concrete number your team can act on."
+      },
+      "rootCause": {
+        "title": "Root-cause analysis",
+        "description": "Know exactly why you lost the Buy Box: cheaper third-party seller, MAP violation, internal SC vs VC cannibalization, or a price suppression."
+      },
+      "alerts": {
+        "title": "Smart alerts",
+        "description": "Email and Slack notifications when visibility drops below your thresholds — so you catch problems in hours, not weeks."
+      }
+    },
+    "finalCta": {
+      "title": "Ready to stop losing sales to the Buy Box?",
+      "subtitle": "Connect your Amazon account and start tracking visibility in minutes.",
+      "cta": "Get started"
+    },
+    "footer": {
+      "copyright": "© 2026 SalesDuo. All rights reserved.",
+      "built": "Buy Box Tracker · Amazon Visibility"
+    }
+  },
+  "buybox": {
+    "overview": {
+      "title": "Buy Box Overview",
+      "description": "Visibility, missed sales, and trends across your tracked products"
+    },
+    "products": {
+      "title": "Products",
+      "description": "Per-product visibility and loss reasons"
+    },
+    "alerts": {
+      "title": "Alerts",
+      "description": "Recent buybox events and notifications",
+      "markRead": "Mark as read",
+      "markAllRead": "Mark all as read"
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Configure tracker schedule, scope, and notifications"
+    }
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success",
+    "noData": "No data available",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "showing": "Showing {{from}} to {{to}} of {{total}}",
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Info"
+    }
+  }
+}
