@@ -2,77 +2,118 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
+  Eye,
+  AlertTriangle,
   TrendingDown,
-  Bell,
-  LineChart,
-  ShieldCheck,
+  DollarSign,
   Sparkles,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
+import { DashboardPreview } from "@/components/landing/DashboardPreview";
+import { FeatureCard } from "@/components/landing/FeatureCard";
+import { HowItWorksStep } from "@/components/landing/HowItWorksStep";
+import { LandingFooter } from "@/components/landing/LandingFooter";
+import { FadeInSection } from "@/components/landing/FadeInSection";
 
 const features = [
   {
-    icon: TrendingDown,
+    icon: Eye,
     titleKey: "landing.features.visibility.title",
     descriptionKey: "landing.features.visibility.description",
   },
   {
-    icon: LineChart,
-    titleKey: "landing.features.revenue.title",
-    descriptionKey: "landing.features.revenue.description",
-  },
-  {
-    icon: ShieldCheck,
+    icon: AlertTriangle,
     titleKey: "landing.features.rootCause.title",
     descriptionKey: "landing.features.rootCause.description",
   },
   {
-    icon: Bell,
-    titleKey: "landing.features.alerts.title",
-    descriptionKey: "landing.features.alerts.description",
+    icon: TrendingDown,
+    titleKey: "landing.features.cheaperSeller.title",
+    descriptionKey: "landing.features.cheaperSeller.description",
   },
-];
+  {
+    icon: DollarSign,
+    titleKey: "landing.features.missedSales.title",
+    descriptionKey: "landing.features.missedSales.description",
+  },
+] as const;
+
+const steps = [
+  { number: 1, titleKey: "landing.howItWorks.step1.title", descriptionKey: "landing.howItWorks.step1.description" },
+  { number: 2, titleKey: "landing.howItWorks.step2.title", descriptionKey: "landing.howItWorks.step2.description" },
+  { number: 3, titleKey: "landing.howItWorks.step3.title", descriptionKey: "landing.howItWorks.step3.description" },
+] as const;
 
 export default function Landing() {
   const { t } = useTranslation();
 
+  const scrollToId = (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <div className="h-full overflow-y-auto bg-background">
       {/* Top nav */}
-      <header className="border-b border-border/40 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-orange-600">
-              <span className="text-sm font-bold text-white">B</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80">
+              <span className="text-sm font-bold text-primary-foreground">B</span>
             </div>
-            <span className="font-semibold tracking-tight">{t("app.name")}</span>
+            <span className="font-semibold tracking-tight text-foreground">{t("app.name")}</span>
           </div>
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/overview">{t("landing.nav.signIn")}</Link>
-          </Button>
+
+          <nav className="hidden items-center gap-6 md:flex">
+            <a
+              href="#how-it-works"
+              onClick={scrollToId("how-it-works")}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {t("landing.nav.howItWorks")}
+            </a>
+            <a
+              href="#features"
+              onClick={scrollToId("features")}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {t("landing.nav.features")}
+            </a>
+          </nav>
+
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/overview">{t("landing.nav.signIn")}</Link>
+            </Button>
+          </div>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        {/* Decorative background — warm SalesDuo brand glow */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-primary/[0.06] via-background to-background">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,hsl(32_100%_50%/0.15),transparent_60%)]"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.22),transparent_60%)]"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[600px] bg-[linear-gradient(to_bottom,hsl(32_100%_97%),transparent)]"
+          className="pointer-events-none absolute -left-20 top-40 -z-10 h-72 w-72 rounded-full bg-primary/10 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 top-20 -z-10 h-72 w-72 rounded-full bg-primary/15 blur-3xl"
         />
 
-        <div className="mx-auto max-w-6xl px-6 pb-24 pt-20 text-center md:pt-28">
+        <div className="mx-auto max-w-6xl px-6 pb-16 pt-20 text-center md:pt-28">
           <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-4 py-1.5 text-xs font-medium text-muted-foreground shadow-sm">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
             <span>{t("landing.hero.badge")}</span>
           </div>
 
-          <h1 className="mx-auto mt-6 max-w-4xl text-balance text-5xl font-bold leading-[1.1] tracking-tight text-foreground md:text-6xl">
+          <h1 className="mx-auto mt-6 max-w-4xl text-balance text-4xl font-bold leading-[1.1] tracking-tight text-foreground md:text-5xl lg:text-6xl">
             {t("landing.hero.title")}
           </h1>
 
@@ -88,70 +129,96 @@ export default function Landing() {
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="h-12 px-8 text-base">
-              <a href="#features">{t("landing.hero.learnMore")}</a>
+              <a href="#how-it-works" onClick={scrollToId("how-it-works")}>
+                {t("landing.hero.learnMore")}
+              </a>
             </Button>
           </div>
 
-          <p className="mt-6 text-xs text-muted-foreground">
-            {t("landing.hero.tagline")}
-          </p>
+          <p className="mt-6 text-xs text-muted-foreground">{t("landing.hero.tagline")}</p>
         </div>
 
-        {/* Decorative metric strip */}
-        <div className="mx-auto mb-20 max-w-5xl px-6">
-          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-border bg-border md:grid-cols-3">
-            {[
-              { value: "24/7", labelKey: "landing.stats.monitoring" },
-              { value: "<1h", labelKey: "landing.stats.alertSpeed" },
-              { value: "100%", labelKey: "landing.stats.coverage" },
-            ].map((stat) => (
-              <div
-                key={stat.value}
-                className="flex flex-col items-center bg-background px-6 py-8"
-              >
-                <div className="text-3xl font-bold text-foreground md:text-4xl">
-                  {stat.value}
-                </div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  {t(stat.labelKey)}
-                </div>
-              </div>
+        <div className="pb-24">
+          <DashboardPreview />
+        </div>
+      </section>
+
+      {/* Features */}
+      <section
+        id="features"
+        className="relative overflow-hidden border-t border-border/40 bg-gradient-to-b from-primary/[0.04] via-background to-primary/[0.06] py-24"
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-0 -z-10 h-64 w-[600px] -translate-x-1/2 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.12),transparent_70%)]"
+        />
+        <div className="mx-auto max-w-6xl px-6">
+          <FadeInSection>
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                {t("landing.features.title")}
+              </h2>
+              <p className="mt-4 text-lg text-muted-foreground">
+                {t("landing.features.subtitle")}
+              </p>
+            </div>
+          </FadeInSection>
+
+          <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {features.map((feature, idx) => (
+              <FadeInSection key={feature.titleKey} delayMs={idx * 80}>
+                <FeatureCard
+                  icon={feature.icon}
+                  title={t(feature.titleKey)}
+                  description={t(feature.descriptionKey)}
+                />
+              </FadeInSection>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section id="features" className="border-t border-border/40 bg-muted/30 py-24">
+      {/* How It Works */}
+      <section
+        id="how-it-works"
+        className="relative overflow-hidden border-t border-border/40 bg-gradient-to-b from-background via-primary/[0.03] to-background py-24"
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 top-1/2 -z-10 h-72 w-72 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-20 top-1/2 -z-10 h-72 w-72 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl"
+        />
         <div className="mx-auto max-w-6xl px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-              {t("landing.features.title")}
-            </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              {t("landing.features.subtitle")}
-            </p>
-          </div>
+          <FadeInSection>
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                {t("landing.howItWorks.title")}
+              </h2>
+              <p className="mt-4 text-lg text-muted-foreground">
+                {t("landing.howItWorks.subtitle")}
+              </p>
+            </div>
+          </FadeInSection>
 
-          <div className="mt-16 grid gap-6 md:grid-cols-2">
-            {features.map((feature) => (
-              <Card
-                key={feature.titleKey}
-                className="border-border/60 transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
-              >
-                <CardContent className="p-8">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                    <feature.icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="mt-5 text-lg font-semibold text-foreground">
-                    {t(feature.titleKey)}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    {t(feature.descriptionKey)}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="relative mt-16">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 top-8 hidden h-0 w-2/3 -translate-x-1/2 border-t border-dashed border-border md:block"
+            />
+            <div className="relative grid grid-cols-1 gap-12 md:grid-cols-3 md:gap-8">
+              {steps.map((step, idx) => (
+                <FadeInSection key={step.number} delayMs={idx * 100}>
+                  <HowItWorksStep
+                    number={step.number}
+                    title={t(step.titleKey)}
+                    description={t(step.descriptionKey)}
+                  />
+                </FadeInSection>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -159,41 +226,41 @@ export default function Landing() {
       {/* Final CTA */}
       <section className="py-24">
         <div className="mx-auto max-w-4xl px-6">
-          <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-orange-500 to-orange-700 px-8 py-16 text-center shadow-2xl shadow-primary/20 md:px-16">
-            <div
-              aria-hidden
-              className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18),transparent_50%)]"
-            />
-            <div className="relative">
-              <h2 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
-                {t("landing.finalCta.title")}
-              </h2>
-              <p className="mx-auto mt-4 max-w-xl text-orange-50 md:text-lg">
-                {t("landing.finalCta.subtitle")}
-              </p>
-              <Button
-                asChild
-                size="lg"
-                variant="secondary"
-                className="mt-8 h-12 px-8 text-base shadow-lg"
-              >
-                <Link to="/overview" data-testid="landing-cta-secondary">
-                  {t("landing.finalCta.cta")}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+          <FadeInSection>
+            <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary via-primary to-primary/80 px-8 py-16 text-center shadow-2xl shadow-primary/20 md:px-16">
+              <div
+                aria-hidden
+                className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary-foreground)/0.18),transparent_50%)]"
+              />
+              <div className="relative">
+                <CheckCircle2
+                  className="mx-auto h-12 w-12 text-primary-foreground"
+                  aria-hidden="true"
+                />
+                <h2 className="mt-4 text-3xl font-bold tracking-tight text-primary-foreground md:text-4xl">
+                  {t("landing.finalCta.title")}
+                </h2>
+                <p className="mx-auto mt-4 max-w-xl text-primary-foreground/90 md:text-lg">
+                  {t("landing.finalCta.subtitle")}
+                </p>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="secondary"
+                  className="mt-8 h-12 px-8 text-base shadow-lg"
+                >
+                  <Link to="/overview" data-testid="landing-cta-secondary">
+                    {t("landing.finalCta.cta")}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
             </div>
-          </div>
+          </FadeInSection>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border/40 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-muted-foreground md:flex-row">
-          <p>{t("landing.footer.copyright")}</p>
-          <p>{t("landing.footer.built")}</p>
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   );
 }

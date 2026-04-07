@@ -11,49 +11,79 @@
   },
   "landing": {
     "nav": {
-      "signIn": "Iniciar sesión"
+      "signIn": "Iniciar sesión",
+      "howItWorks": "Cómo funciona",
+      "features": "Funciones"
     },
     "hero": {
       "badge": "Hecho para vendedores y marcas en Amazon",
-      "title": "Deja de perder el Buy Box sin enterarte.",
-      "subtitle": "Rastrea la propiedad del Buy Box en cada ASIN, conoce la razón exacta por la que lo perdiste y mide los ingresos que estás dejando sobre la mesa, en tiempo real.",
-      "cta": "Empezar",
-      "learnMore": "Más información",
+      "title": "Descubre cuándo estás perdiendo ventas en Amazon.",
+      "subtitle": "Una forma sencilla de entender cuándo tus productos no se muestran a los clientes — y cuánto te está costando exactamente.",
+      "cta": "Ver mis productos",
+      "learnMore": "Cómo funciona",
       "tagline": "Sin configuración compleja. Conecta tu cuenta de Seller Central o Vendor Central en minutos."
     },
-    "stats": {
-      "monitoring": "Monitoreo continuo",
-      "alertSpeed": "De pérdida a alerta",
-      "coverage": "De tus ASINs rastreados"
+    "preview": {
+      "salesMissed": "Ventas perdidas",
+      "productsAffected": "Productos afectados",
+      "visibility": "Visibilidad",
+      "lastUpdated": "Última actualización"
     },
     "features": {
-      "title": "Todo lo que necesitas para defender el Buy Box",
-      "subtitle": "Visibilidad, análisis de causa raíz y alertas, diseñados para cómo funciona Amazon realmente.",
+      "title": "Todo lo que necesitas rastrear",
+      "subtitle": "Información simple y potente sobre tus ventas en Amazon",
       "visibility": {
-        "title": "Seguimiento de visibilidad",
-        "description": "Monitorea la propiedad del Buy Box en cada ASIN con la frecuencia que necesites: por hora, diaria o en tiempo real."
-      },
-      "revenue": {
-        "title": "Impacto en ingresos",
-        "description": "Cuantifica los dólares que pierdes cada vez que el Buy Box cambia. Convierte un problema abstracto en un número concreto para tu equipo."
+        "title": "Visibilidad para clientes",
+        "description": "Rastrea cuándo tus productos se muestran a los compradores de Amazon en tiempo real"
       },
       "rootCause": {
-        "title": "Análisis de causa raíz",
-        "description": "Sabe exactamente por qué perdiste el Buy Box: vendedor 3P más barato, violación de MAP, canibalización SC vs VC o precio suprimido."
+        "title": "Razón de la pérdida de ventas",
+        "description": "Comprende exactamente por qué los clientes no pueden ver tus productos"
       },
-      "alerts": {
-        "title": "Alertas inteligentes",
-        "description": "Notificaciones por correo y Slack cuando la visibilidad baje de tus umbrales — detecta problemas en horas, no en semanas."
+      "cheaperSeller": {
+        "title": "Detección de vendedores más baratos",
+        "description": "Recibe alertas cuando los competidores ofrezcan precios más bajos"
+      },
+      "missedSales": {
+        "title": "Estimación de ventas perdidas",
+        "description": "Ve el impacto en ingresos de la pérdida de visibilidad"
+      }
+    },
+    "howItWorks": {
+      "title": "Cómo funciona",
+      "subtitle": "Empieza en tres simples pasos",
+      "step1": {
+        "title": "Rastrea productos",
+        "description": "Conecta tu cuenta de Amazon"
+      },
+      "step2": {
+        "title": "Comprende los problemas",
+        "description": "Descubre por qué estás perdiendo ventas"
+      },
+      "step3": {
+        "title": "Monitorea el impacto",
+        "description": "Rastrea los ingresos a lo largo del tiempo"
       }
     },
     "finalCta": {
-      "title": "¿Listo para dejar de perder ventas por el Buy Box?",
-      "subtitle": "Conecta tu cuenta de Amazon y comienza a rastrear la visibilidad en minutos.",
+      "title": "Empieza a rastrear tus productos hoy",
+      "subtitle": "Únete a los vendedores que ya están recuperando ventas perdidas.",
       "cta": "Empezar"
     },
     "footer": {
+      "description": "Descubre cuándo estás perdiendo ventas en Amazon y recupéralas.",
+      "product": "Producto",
+      "company": "Empresa",
+      "language": "Idioma",
       "copyright": "© 2026 SalesDuo. Todos los derechos reservados.",
-      "built": "Buy Box Tracker · Visibilidad en Amazon"
+      "built": "Buy Box Tracker · Visibilidad en Amazon",
+      "links": {
+        "features": "Funciones",
+        "howItWorks": "Cómo funciona",
+        "about": "Acerca de",
+        "contact": "Contacto",
+        "privacy": "Privacidad"
+      }
     }
   },
   "buybox": {

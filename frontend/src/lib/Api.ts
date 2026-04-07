@@ -28,7 +28,7 @@ api.interceptors.response.use(
   (response) => {
     if (response.data && typeof response.data === "object" && "status" in response.data && "data" in response.data) {
       if ("pagination" in response.data) {
-        const { status, ...rest } = response.data;
+        const { status: _status, ...rest } = response.data;
         response.data = rest;
       } else {
         response.data = response.data.data;
