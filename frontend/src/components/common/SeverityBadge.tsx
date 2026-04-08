@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/Utils";
+import { cn } from "@/lib/utils";
 
 const severityStyles: Record<string, string> = {
   critical: "bg-red-100 text-red-800 border-red-200",

@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useFadeInOnScroll } from "./useFadeInOnScroll";
 import { useCountUp } from "./useCountUp";
-import { cn } from "@/lib/Utils";
+import { cn } from "@/lib/utils";
 
 interface StatTileProps {
   value: string;
