@@ -68,7 +68,9 @@
     "finalCta": {
       "title": "Empieza a rastrear tus productos hoy",
       "subtitle": "Únete a los vendedores que ya están recuperando ventas perdidas.",
-      "cta": "Empezar"
+      "cta": "Empezar",
+      "trustNoCard": "No se requiere tarjeta de crédito",
+      "trustSetup": "Configuración en minutos"
     },
     "footer": {
       "description": "Descubre cuándo estás perdiendo ventas en Amazon y recupéralas.",

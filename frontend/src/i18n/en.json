@@ -68,7 +68,9 @@
     "finalCta": {
       "title": "Start Tracking Your Products Today",
       "subtitle": "Join sellers who are already recovering lost sales.",
-      "cta": "Get Started"
+      "cta": "Get Started",
+      "trustNoCard": "No credit card required",
+      "trustSetup": "Setup in minutes"
     },
     "footer": {
       "description": "See when you're losing sales on Amazon and recover them.",

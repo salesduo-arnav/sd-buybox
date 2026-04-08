@@ -57,35 +57,41 @@ export default function Landing() {
   return (
     <div className="h-full overflow-y-auto bg-background">
       {/* Top nav */}
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80">
+      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+        <div className="flex w-full items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-12">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 shadow-md shadow-primary/30 ring-1 ring-primary/30">
               <span className="text-sm font-bold text-primary-foreground">B</span>
             </div>
-            <span className="font-semibold tracking-tight text-foreground">{t("app.name")}</span>
+            <span className="truncate text-base font-semibold tracking-tight text-foreground">
+              {t("app.name")}
+            </span>
           </div>
 
-          <nav className="hidden items-center gap-6 md:flex">
+          <nav className="hidden flex-1 items-center justify-center gap-6 md:flex lg:gap-10">
             <a
               href="#how-it-works"
               onClick={scrollToId("how-it-works")}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="relative whitespace-nowrap text-sm font-medium text-muted-foreground transition-colors hover:text-foreground after:absolute after:inset-x-0 after:-bottom-1.5 after:h-0.5 after:origin-center after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform hover:after:scale-x-100"
             >
               {t("landing.nav.howItWorks")}
             </a>
             <a
               href="#features"
               onClick={scrollToId("features")}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="relative whitespace-nowrap text-sm font-medium text-muted-foreground transition-colors hover:text-foreground after:absolute after:inset-x-0 after:-bottom-1.5 after:h-0.5 after:origin-center after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform hover:after:scale-x-100"
             >
               {t("landing.nav.features")}
             </a>
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-1 items-center justify-end gap-2">
             <LanguageSwitcher />
-            <Button asChild variant="ghost" size="sm">
+            <Button
+              asChild
+              size="sm"
+              className="h-9 rounded-full px-4 shadow-sm shadow-primary/20 sm:px-5"
+            >
               <Link to="/overview">{t("landing.nav.signIn")}</Link>
             </Button>
           </div>
@@ -93,42 +99,62 @@ export default function Landing() {
       </header>
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-primary/[0.06] via-background to-background">
+      <section className="relative overflow-hidden bg-gradient-to-b from-primary/[0.08] via-background to-background">
+        {/* Soft radial halo */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.22),transparent_60%)]"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.25),transparent_60%)]"
+        />
+        {/* Grid pattern background */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(to_right,hsl(var(--foreground)/0.04)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--foreground)/0.04)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]"
+        />
+        {/* Orbital blurs */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-32 top-40 -z-10 h-80 w-80 rounded-full bg-primary/15 blur-3xl"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute -left-20 top-40 -z-10 h-72 w-72 rounded-full bg-primary/10 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-20 top-20 -z-10 h-72 w-72 rounded-full bg-primary/15 blur-3xl"
+          className="pointer-events-none absolute -right-32 top-20 -z-10 h-80 w-80 rounded-full bg-primary/20 blur-3xl"
         />
 
-        <div className="mx-auto max-w-6xl px-6 pb-16 pt-20 text-center md:pt-28">
-          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-4 py-1.5 text-xs font-medium text-muted-foreground shadow-sm">
+        <div className="mx-auto max-w-6xl px-4 pb-16 pt-16 text-center sm:px-6 sm:pb-20 sm:pt-20 md:pt-28">
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/80 px-4 py-1.5 text-xs font-medium text-foreground/80 shadow-sm backdrop-blur">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
+            </span>
             <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
             <span>{t("landing.hero.badge")}</span>
           </div>
 
-          <h1 className="mx-auto mt-6 max-w-4xl text-balance text-4xl font-bold leading-[1.1] tracking-tight text-foreground md:text-5xl lg:text-6xl">
+          <h1 className="mx-auto mt-6 max-w-4xl text-balance text-4xl font-bold leading-[1.05] tracking-tight text-foreground sm:mt-8 sm:text-5xl md:text-6xl lg:text-7xl">
             {t("landing.hero.title")}
           </h1>
 
-          <p className="mx-auto mt-6 max-w-2xl text-balance text-lg text-muted-foreground md:text-xl">
+          <p className="mx-auto mt-5 max-w-2xl text-balance text-base text-muted-foreground sm:mt-6 sm:text-lg md:text-xl">
             {t("landing.hero.subtitle")}
           </p>
 
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button asChild size="lg" className="h-12 px-8 text-base shadow-lg shadow-primary/20">
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:mt-10 sm:flex-row">
+            <Button
+              asChild
+              size="lg"
+              className="group h-12 w-full rounded-full px-8 text-base shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/40 sm:w-auto"
+            >
               <Link to="/overview" data-testid="landing-cta-primary">
                 {t("landing.hero.cta")}
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="h-12 px-8 text-base">
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="h-12 w-full rounded-full border-border/80 px-8 text-base backdrop-blur hover:bg-background sm:w-auto"
+            >
               <a href="#how-it-works" onClick={scrollToId("how-it-works")}>
                 {t("landing.hero.learnMore")}
               </a>
@@ -224,36 +250,111 @@ export default function Landing() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24">
-        <div className="mx-auto max-w-4xl px-6">
+      <section className="relative overflow-hidden py-24">
+        {/* Ambient background accents so the CTA card doesn't feel isolated */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.08),transparent_70%)]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-border to-transparent"
+        />
+        <div className="mx-auto max-w-5xl px-6">
           <FadeInSection>
-            <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary via-primary to-primary/80 px-8 py-16 text-center shadow-2xl shadow-primary/20 md:px-16">
+            <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-background via-primary/[0.06] to-primary/[0.08] px-6 py-12 text-center shadow-xl shadow-primary/10 sm:px-8 sm:py-16 md:px-16">
+              {/* Soft radial highlight — mirrors the hero section */}
               <div
                 aria-hidden
-                className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary-foreground)/0.18),transparent_50%)]"
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.18),transparent_65%)]"
               />
+              {/* Grid pattern — same as hero */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--foreground)/0.05)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--foreground)/0.05)_1px,transparent_1px)] bg-[size:44px_44px] [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)]"
+              />
+              {/* Glowing orbs */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -bottom-24 -right-16 h-72 w-72 rounded-full bg-primary/25 blur-3xl"
+              />
+              {/* Decorative concentric rings — stronger so they read clearly */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-32 -top-32 h-80 w-80 rounded-full border-2 border-primary/25"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full border-2 border-primary/30"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full border-2 border-primary/35"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -bottom-28 -left-28 h-72 w-72 rounded-full border-2 border-primary/25"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full border-2 border-primary/30"
+              />
+              {/* Floating sparkle accents — bumped up so they're visible */}
+              <Sparkles
+                aria-hidden
+                className="pointer-events-none absolute left-12 top-12 h-6 w-6 text-primary"
+              />
+              <Sparkles
+                aria-hidden
+                className="pointer-events-none absolute bottom-16 right-20 h-5 w-5 text-primary/80"
+              />
+              <Sparkles
+                aria-hidden
+                className="pointer-events-none absolute right-28 top-20 h-4 w-4 text-primary/70"
+              />
+              <Sparkles
+                aria-hidden
+                className="pointer-events-none absolute bottom-24 left-20 h-4 w-4 text-primary/60"
+              />
+
               <div className="relative">
-                <CheckCircle2
-                  className="mx-auto h-12 w-12 text-primary-foreground"
-                  aria-hidden="true"
-                />
-                <h2 className="mt-4 text-3xl font-bold tracking-tight text-primary-foreground md:text-4xl">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 ring-1 ring-primary/30 shadow-sm shadow-primary/10 backdrop-blur-sm">
+                  <CheckCircle2
+                    className="h-9 w-9 text-primary"
+                    aria-hidden="true"
+                  />
+                </div>
+                <h2 className="mt-6 text-balance text-2xl font-bold tracking-tight text-foreground sm:text-3xl md:text-4xl">
                   {t("landing.finalCta.title")}
                 </h2>
-                <p className="mx-auto mt-4 max-w-xl text-primary-foreground/90 md:text-lg">
+                <p className="mx-auto mt-4 max-w-xl text-balance text-sm text-muted-foreground sm:text-base md:text-lg">
                   {t("landing.finalCta.subtitle")}
                 </p>
                 <Button
                   asChild
                   size="lg"
-                  variant="secondary"
-                  className="mt-8 h-12 px-8 text-base shadow-lg"
+                  className="group mt-8 h-12 w-full rounded-full bg-primary px-8 text-base font-semibold text-primary-foreground shadow-xl shadow-primary/30 transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-2xl hover:shadow-primary/40 sm:w-auto"
                 >
                   <Link to="/overview" data-testid="landing-cta-secondary">
                     {t("landing.finalCta.cta")}
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                    {t("landing.finalCta.trustNoCard")}
+                  </span>
+                  <span className="hidden h-1 w-1 rounded-full bg-muted-foreground/40 sm:inline-block" />
+                  <span className="inline-flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                    {t("landing.finalCta.trustSetup")}
+                  </span>
+                </div>
               </div>
             </div>
           </FadeInSection>
