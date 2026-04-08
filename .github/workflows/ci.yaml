@@ -1,0 +1,207 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master, dev ]
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.changes.outputs.backend }}
+      frontend: ${{ steps.changes.outputs.frontend }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Detect changed paths
+        id: changes
+        run: |
+          BACKEND_CHANGED=$(git diff --name-only HEAD~1 HEAD -- backend/ | head -1)
+          FRONTEND_CHANGED=$(git diff --name-only HEAD~1 HEAD -- frontend/ | head -1)
+          echo "backend=$( [ -n "$BACKEND_CHANGED" ] && echo true || echo false )" >> "$GITHUB_OUTPUT"
+          echo "frontend=$( [ -n "$FRONTEND_CHANGED" ] && echo true || echo false )" >> "$GITHUB_OUTPUT"
+          echo "Backend changed: $( [ -n "$BACKEND_CHANGED" ] && echo yes || echo no )"
+          echo "Frontend changed: $( [ -n "$FRONTEND_CHANGED" ] && echo yes || echo no )"
+
+  lint-backend:
+    name: Lint Backend
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Dependencies
+        working-directory: ./backend
+        run: npm ci
+      - name: Run Lint
+        working-directory: ./backend
+        run: |
+          set -o pipefail
+          npm run lint 2>&1 | tee ../backend_lint_report.md
+
+      - name: Upload Lint Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-lint-report
+          path: backend_lint_report.md
+
+  lint-frontend:
+    name: Lint Frontend
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Dependencies
+        working-directory: ./frontend
+        run: npm ci
+      - name: Run Lint
+        working-directory: ./frontend
+        run: |
+          set -o pipefail
+          npm run lint 2>&1 | tee ../frontend_lint_report.md
+
+      - name: Build Check
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Install Playwright
+        working-directory: ./frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E Tests
+        working-directory: ./frontend
+        run: npx playwright test --reporter=list 2>&1 | tee ../frontend_e2e_report.md
+
+      - name: Upload Lint Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-lint-report
+          path: frontend_lint_report.md
+
+  tests:
+    name: Backend Tests
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Create .env files
+        run: |
+          echo "${{ secrets.BACKEND_ENV_FILE }}" > backend/.env
+          echo "${{ secrets.FRONTEND_ENV_FILE }}" > frontend/.env
+          echo "${{ secrets.ROOT_ENV_FILE }}" > .env
+
+      - name: Build Docker Images
+        run: docker compose build
+
+      - name: Start Services
+        run: |
+          docker compose up -d
+          echo "Waiting for services to initialize..."
+          sleep 15
+          docker compose ps
+
+      - name: Debug Containers
+        if: always()
+        run: |
+          echo "=== Docker PS ==="
+          docker compose ps
+          echo "=== All Containers ==="
+          docker ps -a
+          echo "=== Backend Logs ==="
+          docker compose logs backend || true
+          echo "=== Postgres Logs ==="
+          docker compose logs postgres || true
+
+      - name: Prepare Backend Test Database
+        run: |
+          set -a; source .env; set +a
+          echo "Waiting for Postgres to be ready..."
+          until docker compose exec -T postgres pg_isready -U "$PGUSER" -d "$PGDATABASE"; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+          echo "Creating test database 'buybox_test'..."
+          docker compose exec -T postgres psql -U "$PGUSER" -d "$PGDATABASE" -c "SELECT 1 FROM pg_database WHERE datname = 'buybox_test'" | grep -q 1 \
+            || docker compose exec -T postgres createdb -U "$PGUSER" buybox_test
+
+      - name: Run Backend Tests
+        run: |
+          set -o pipefail
+          docker compose exec -T backend npm test 2>&1 | tee backend_report.md
+
+      - name: Teardown
+        if: always()
+        run: docker compose down
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            backend_report.md
+
+  report:
+    name: Generate CML Report
+    needs: [detect-changes, lint-backend, lint-frontend, tests]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup CML
+        uses: iterative/setup-cml@v2
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Generate Report
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "## Backend Test Results" > report.md
+          echo "\`\`\`" >> report.md
+          cat test-reports/backend_report.md >> report.md || echo "Tests skipped or not found." >> report.md
+          echo "\`\`\`" >> report.md
+
+          echo "## Backend Lint Results" >> report.md
+          echo "\`\`\`" >> report.md
+          cat backend-lint-report/backend_lint_report.md >> report.md || echo "Lint skipped or not found." >> report.md
+          echo "\`\`\`" >> report.md
+
+          echo "## Frontend Lint Results" >> report.md
+          echo "\`\`\`" >> report.md
+          cat frontend-lint-report/frontend_lint_report.md >> report.md || echo "Lint skipped or not found." >> report.md
+          echo "\`\`\`" >> report.md
+
+          cml comment create report.md
