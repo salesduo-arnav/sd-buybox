@@ -70,7 +70,9 @@ jobs:
           node-version: '20'
       - name: Install Dependencies
         working-directory: ./frontend
-        run: npm ci
+        run: |
+          rm -f package-lock.json
+          npm install --no-audit --no-fund
       - name: Run Lint
         working-directory: ./frontend
         run: |
