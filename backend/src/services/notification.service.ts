@@ -7,7 +7,7 @@ import { JOB_NAMES } from '../config/constants';
  * Dispatches alerts via email and Slack through core-platform:
  * - Registers pg-boss handler for ALERT_DISPATCH
  * - Checks tracker_config notification preferences
- * - Calls core_platform.service for actual delivery
+ * - Calls corePlatform.client for actual delivery
  */
 class NotificationService {
     async registerJobHandlers(): Promise<void> {

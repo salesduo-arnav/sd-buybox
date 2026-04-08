@@ -8,7 +8,7 @@ import { handleError } from '../utils/handle_error';
  */
 export const getOverview = async (req: Request, res: Response) => {
     try {
-        const organizationId = req.user!.organization_id;
+        const organizationId = req.auth!.organization!.id;
         const { period = 'last_30_days', account_id } = req.query;
 
         // TODO: Call metricsService.getOverview(...)

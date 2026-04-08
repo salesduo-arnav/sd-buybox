@@ -1,36 +1,31 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import api from "@/lib/Api";
+import { LS } from "@/lib/localStorageKeys";
+import { redirectToLogoutLanding } from "@/lib/authRedirect";
+import type { AuthUser, Membership, Organization } from "@/types/Auth";
 
-interface Organization {
-  id: string;
-  name: string;
-  slug?: string;
-}
-
-interface Membership {
-  organization: Organization;
-  role: { id: number; name: string; slug?: string };
-}
-
-interface User {
-  id: string;
-  email: string;
-  full_name: string;
-  organization_id: string;
-  organization_name: string;
-  role: string;
-  memberships?: Membership[];
-}
+/**
+ * AuthContext
+ *
+ * Owns the "who am I?" state for buybox. All identity flows through here:
+ *   - On mount, calls `/api/auth/me` to fetch the current session.
+ *   - Resolves an active organization (from localStorage if valid, else first membership).
+ *   - Exposes org switching, logout, and a refresh hook.
+ *
+ * Buybox owns ZERO auth state of its own. Login happens entirely on
+ * sd-core-platform — unauthenticated users are redirected there by
+ * `ProtectedRoute` / the Api interceptor.
+ */
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   activeOrganization: Organization | null;
   organizations: Organization[];
   switchOrganization: (orgId: string) => void;
   refreshUser: () => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -41,12 +36,18 @@ const AuthContext = createContext<AuthContextType>({
   organizations: [],
   switchOrganization: () => {},
   refreshUser: async () => {},
-  logout: () => {},
+  logout: async () => {},
 });
 
+/**
+ * Pick the org to make active after a fresh `/auth/me` load:
+ *   1. If localStorage has a saved org id AND the user still has that membership, use it.
+ *   2. Otherwise fall back to the first membership.
+ *   3. If the user has no memberships, return null (new user onboarding case).
+ */
 function resolveActiveOrg(memberships: Membership[]): Organization | null {
   if (!memberships || memberships.length === 0) return null;
-  const savedOrgId = localStorage.getItem("activeOrganizationId");
+  const savedOrgId = localStorage.getItem(LS.orgId);
   if (savedOrgId) {
     const match = memberships.find((m) => m.organization.id === savedOrgId);
     if (match) return match.organization;
@@ -55,23 +56,27 @@ function resolveActiveOrg(memberships: Membership[]): Organization | null {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeOrganization, setActiveOrganization] = useState<Organization | null>(null);
 
-  const organizations = user?.memberships?.map((m) => m.organization) || [];
+  const organizations = user?.memberships?.map((m) => m.organization) ?? [];
 
   const refreshUser = useCallback(async () => {
     try {
-      const { data } = await api.get("/auth/me");
+      const { data } = await api.get<AuthUser>("/auth/me");
       setUser(data);
-      const memberships: Membership[] = data.memberships || [];
-      const org = resolveActiveOrg(memberships);
+      const org = resolveActiveOrg(data.memberships ?? []);
       setActiveOrganization(org);
       if (org) {
-        localStorage.setItem("activeOrganizationId", org.id);
+        localStorage.setItem(LS.orgId, org.id);
+      } else {
+        localStorage.removeItem(LS.orgId);
       }
     } catch {
+      // 401 is handled by the Api interceptor (except for /auth/me itself,
+      // which is whitelisted). Any error here means "not logged in" — just
+      // clear local state; ProtectedRoute will trigger the login redirect.
       setUser(null);
       setActiveOrganization(null);
     } finally {
@@ -81,31 +86,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const switchOrganization = useCallback(
     (orgId: string) => {
-      const memberships = user?.memberships || [];
-      const match = memberships.find((m) => m.organization.id === orgId);
-      if (match) {
-        setActiveOrganization(match.organization);
-        localStorage.setItem("activeOrganizationId", orgId);
-        // Clear active account — will be re-resolved by AccountContext
-        localStorage.removeItem("activeIntegrationAccountId");
-      }
+      const match = user?.memberships?.find((m) => m.organization.id === orgId);
+      if (!match) return;
+      setActiveOrganization(match.organization);
+      localStorage.setItem(LS.orgId, orgId);
+      // Clear active account — AccountContext will re-resolve it for the new org.
+      localStorage.removeItem(LS.accountId);
     },
-    [user],
+    [user]
   );
 
   const logout = useCallback(async () => {
     setUser(null);
     setActiveOrganization(null);
-    localStorage.removeItem("activeIntegrationAccountId");
-    localStorage.removeItem("activeOrganizationId");
+    localStorage.removeItem(LS.orgId);
+    localStorage.removeItem(LS.accountId);
     try {
       await api.post("/auth/logout");
     } catch {
-      // Best effort
+      // Best effort — logout must not block on upstream failures.
     }
-    const corePlatformUrl =
-      import.meta.env.VITE_CORE_PLATFORM_URL || "http://localhost:3000";
-    window.location.href = `${corePlatformUrl}/login?redirect=${encodeURIComponent(window.location.origin)}&app=buybox`;
+    redirectToLogoutLanding();
   }, []);
 
   useEffect(() => {

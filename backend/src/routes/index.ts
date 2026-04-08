@@ -1,49 +1,37 @@
 import { Router } from 'express';
-import { authenticate } from '../middlewares/auth.middleware';
-import corePlatformService from '../services/core_platform.service';
+import { authenticate, resolveOrganization, requireSuperuser } from '../middlewares/auth.middleware';
+import authRoutes from './auth.routes';
 import visibilityRoutes from './visibility.routes';
 import productRoutes from './product.routes';
 import alertRoutes from './alert.routes';
 import scanRoutes from './scan.routes';
 import settingsRoutes from './settings.routes';
 import adminRoutes from './admin.routes';
+import integrationsRoutes from './integrations.routes';
 
+/**
+ * Root API router.
+ *
+ * Auth chain is mounted once, per-group, at this level. Individual feature
+ * routers do NOT call `router.use(authenticate)` — they trust the chain
+ * established here:
+ *
+ *   /auth           -> authenticate only (/me), or public (/logout)
+ *   /<feature>      -> authenticate + resolveOrganization
+ *   /admin          -> authenticate + resolveOrganization + requireSuperuser
+ */
 const router = Router();
 
-// Auth endpoint — proxies to core platform
-router.get('/auth/me', authenticate, (req, res) => {
-    const { memberships, ...user } = req.user!;
-    res.json({
-        status: 'success',
-        data: {
-            ...user,
-            full_name: user.name,
-            memberships: memberships || [],
-        },
-    });
-});
+router.use('/auth', authRoutes);
 
-// Logout — clear session on core platform and clear cookie
-router.post('/auth/logout', async (req, res) => {
-    try {
-        const sessionId = req.cookies.session_id;
-        if (sessionId) {
-            await corePlatformService.logout(sessionId);
-        }
-        res.clearCookie('session_id');
-        res.json({ status: 'success' });
-    } catch {
-        res.clearCookie('session_id');
-        res.json({ status: 'success' });
-    }
-});
+const orgChain = [authenticate, resolveOrganization];
 
-// Feature routes
-router.use('/visibility', visibilityRoutes);
-router.use('/products', productRoutes);
-router.use('/alerts', alertRoutes);
-router.use('/scans', scanRoutes);
-router.use('/settings', settingsRoutes);
-router.use('/admin', adminRoutes);
+router.use('/visibility',   ...orgChain, visibilityRoutes);
+router.use('/products',     ...orgChain, productRoutes);
+router.use('/alerts',       ...orgChain, alertRoutes);
+router.use('/scans',        ...orgChain, scanRoutes);
+router.use('/settings',     ...orgChain, settingsRoutes);
+router.use('/integrations', ...orgChain, integrationsRoutes);
+router.use('/admin',        ...orgChain, requireSuperuser, adminRoutes);
 
 export default router;

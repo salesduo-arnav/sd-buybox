@@ -1,10 +1,8 @@
 import { Router } from 'express';
-import { authenticate } from '../middlewares/auth.middleware';
 import { triggerScan, listScans, getScan } from '../controllers/scan.controller';
 
+// Auth + org-scoping are mounted centrally in routes/index.ts.
 const router = Router();
-
-router.use(authenticate);
 
 // POST /api/scans/trigger
 router.post('/trigger', triggerScan);

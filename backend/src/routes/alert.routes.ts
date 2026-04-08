@@ -1,10 +1,8 @@
 import { Router } from 'express';
-import { authenticate } from '../middlewares/auth.middleware';
 import { listAlerts, markAsRead, markAllAsRead } from '../controllers/alert.controller';
 
+// Auth + org-scoping are mounted centrally in routes/index.ts.
 const router = Router();
-
-router.use(authenticate);
 
 // GET /api/alerts?severity=critical&is_read=false&account_id=uuid
 router.get('/', listAlerts);

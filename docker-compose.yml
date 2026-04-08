@@ -1,21 +1,12 @@
 services:
-  gateway:
-    image: nginx:latest
-    ports:
-      - "${GATEWAY_PORT:-5175}:80"
-    volumes:
-      - ./gateway/nginx.conf:/etc/nginx/nginx.conf
-    networks:
-      - buybox-net
-    depends_on:
-      - backend
-      - frontend
-
-  postgres:
+  # Buybox's own postgres. The service name is `buybox-db` (not just `db` or
+  # `postgres`) so it cannot collide with sd-core-platform's `postgres`
+  # service when both stacks share the `salesduo-net` network.
+  buybox-db:
     image: postgres:16-alpine
     container_name: buybox-db
     ports:
-      - "${PGPORT:-5434}:5432"
+      - "5434:5432"
     environment:
       POSTGRES_USER: ${PGUSER}
       POSTGRES_PASSWORD: ${PGPASSWORD}
@@ -23,7 +14,7 @@ services:
     volumes:
       - buybox-pgdata:/var/lib/postgresql/data
     networks:
-      - buybox-net
+      - salesduo-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -34,34 +25,46 @@ services:
     container_name: buybox-backend
     env_file: ./.env
     environment:
-      PGHOST: postgres
+      # .env is written for host-machine dev (localhost URLs).
+      # Override the host-specific bits for the container runtime:
+      #   - postgres is reachable as `buybox-db` on salesduo-net
+      #   - core-platform backend is resolvable by container name on the
+      #     shared salesduo-net bridge (created by sd-core-platform/docker-compose.yml)
+      PGHOST: buybox-db
       PGPORT: "5432"
-      CORE_PLATFORM_URL: http://host.docker.internal:4001
-      CORE_PLATFORM_INTERNAL_URL: http://host.docker.internal:4001
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      CORE_PLATFORM_INTERNAL_URL: http://core-backend:3000
+      CORE_PLATFORM_URL: http://app.lvh.me
+      CORS_ORIGINS: http://buybox.lvh.me
     ports:
       - "5003:5003"
     networks:
-      - buybox-net
+      - salesduo-net
     depends_on:
-      postgres:
+      buybox-db:
         condition: service_healthy
 
   frontend:
     build:
       context: ./frontend
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        # These must point at the gateway-served origin so the cookie is shared.
+        VITE_API_BASE_URL: http://buybox.lvh.me
+        VITE_CORE_PLATFORM_URL: http://app.lvh.me
     container_name: buybox-frontend
+    ports:
+      - "5004:8080"
     networks:
-      - buybox-net
+      - salesduo-net
     depends_on:
       - backend
 
 networks:
-  buybox-net:
-    driver: bridge
+  # External: created by sd-core-platform's docker-compose. Buybox containers
+  # join it so the core-platform gateway can resolve `buybox-backend` and
+  # `buybox-frontend` (and so the backend can resolve `core-backend`).
+  # Run core-platform's `make dev` first so this network exists.
+  salesduo-net:
+    external: true
 
 volumes:
   buybox-pgdata:

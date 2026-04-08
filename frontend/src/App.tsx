@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AccountProvider } from "@/contexts/AccountContext";
+import { redirectToLogin } from "@/lib/authRedirect";
 import Layout from "@/components/layout/Layout";
 import Landing from "@/pages/Landing";
 
@@ -24,13 +25,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      const corePlatformUrl =
-        import.meta.env.VITE_CORE_PLATFORM_URL || "http://localhost:3000";
-      window.location.href = `${corePlatformUrl}/login?redirect=${encodeURIComponent(
-        window.location.origin + location.pathname
-      )}&app=buybox`;
+      redirectToLogin(window.location.origin + location.pathname + location.search);
     }
-  }, [isLoading, isAuthenticated, location.pathname]);
+  }, [isLoading, isAuthenticated, location.pathname, location.search]);
 
   if (isLoading) {
     return (

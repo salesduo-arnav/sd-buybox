@@ -12,7 +12,7 @@ import { handleError } from '../utils/handle_error';
  */
 export const listAlerts = async (req: Request, res: Response) => {
     try {
-        const organizationId = req.user!.organization_id;
+        const organizationId = req.auth!.organization!.id;
         const pagination = parsePagination(req.query);
         const { severity, is_read, account_id } = req.query;
 
@@ -51,7 +51,7 @@ export const markAsRead = async (req: Request, res: Response) => {
 
 export const markAllAsRead = async (req: Request, res: Response) => {
     try {
-        const organizationId = req.user!.organization_id;
+        const organizationId = req.auth!.organization!.id;
         await Alert.update({ is_read: true }, { where: { organization_id: organizationId, is_read: false } });
         res.json({ status: 'success', message: 'All alerts marked as read' });
     } catch (error) {

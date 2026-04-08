@@ -1,10 +1,8 @@
 import { Router } from 'express';
-import { authenticate } from '../middlewares/auth.middleware';
 import { getSettings, updateSettings } from '../controllers/settings.controller';
 
+// Auth + org-scoping are mounted centrally in routes/index.ts.
 const router = Router();
-
-router.use(authenticate);
 
 // GET /api/settings/:accountId
 router.get('/:accountId', getSettings);

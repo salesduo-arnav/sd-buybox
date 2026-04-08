@@ -1,21 +1,4 @@
-// Shared TypeScript interfaces
-
-export interface IntegrationCredentials {
-    refresh_token: string;
-    client_id: string;
-    client_secret: string;
-    marketplace_id: string;
-    seller_id: string;
-    region: string;
-}
-
-export interface CorePlatformUser {
-    id: string;
-    email: string;
-    full_name: string;
-    is_superuser?: boolean;
-    memberships: Array<{
-        organization: { id: string; name: string; slug?: string };
-        role: { id: number; name: string; slug?: string };
-    }>;
-}
+// Re-export the canonical core-platform types.
+// All consumers should import from './corePlatform' directly going forward;
+// this barrel exists so existing `from '../types'` imports keep compiling.
+export * from './corePlatform';

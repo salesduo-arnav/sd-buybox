@@ -1,12 +1,8 @@
 import { Router } from 'express';
-import { authenticate } from '../middlewares/auth.middleware';
-import { requireAdmin } from '../middlewares/admin.middleware';
 import { listConfigs, updateConfig } from '../controllers/admin.controller';
 
+// Auth + org-scoping + requireSuperuser are mounted centrally in routes/index.ts.
 const router = Router();
-
-router.use(authenticate);
-router.use(requireAdmin);
 
 // GET /api/admin/configs
 router.get('/configs', listConfigs);

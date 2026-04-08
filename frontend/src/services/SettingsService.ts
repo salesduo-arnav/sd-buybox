@@ -1,12 +1,9 @@
-import api from "@/lib/Api";
-import { IntegrationAccount } from "@/types/Account";
-
 /**
- * Minimal settings service for the sd-buybox foundation. Only the
- * `listAccounts` method is implemented today — used by AccountContext
- * to populate the account switcher. Add more methods (preferences,
- * notifications, etc.) as feature pages are built.
+ * SettingsService is intentionally empty right now.
+ *
+ * Buybox-local settings endpoints (tracker config, notification preferences,
+ * etc.) will be added here as feature pages are built. Integration account
+ * listing lives in `IntegrationsService` — it's a proxy to core-platform,
+ * not a buybox setting.
  */
-export const SettingsService = {
-  listAccounts: () => api.get<IntegrationAccount[]>("/settings/accounts"),
-};
+export const SettingsService = {};

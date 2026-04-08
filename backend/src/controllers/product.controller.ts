@@ -11,7 +11,7 @@ import { handleError } from '../utils/handle_error';
  */
 export const listProducts = async (req: Request, res: Response) => {
     try {
-        const organizationId = req.user!.organization_id;
+        const organizationId = req.auth!.organization!.id;
         const pagination = parsePagination(req.query);
         const { search, account_id } = req.query;
 
