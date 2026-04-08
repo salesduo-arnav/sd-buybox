@@ -117,6 +117,9 @@ jobs:
           echo "${{ secrets.FRONTEND_ENV_FILE }}" > frontend/.env
           echo "${{ secrets.ROOT_ENV_FILE }}" > .env
 
+      - name: Create shared network
+        run: docker network create salesduo-net || true
+
       - name: Build Docker Images
         run: docker compose build
 
