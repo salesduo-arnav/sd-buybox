@@ -1,10 +1,8 @@
 import { Router } from 'express';
-import { authenticate } from '../middlewares/auth.middleware';
 import { listProducts, getProduct } from '../controllers/product.controller';
 
+// Auth + org-scoping are mounted centrally in routes/index.ts.
 const router = Router();
-
-router.use(authenticate);
 
 // GET /api/products?page=1&limit=20&search=...&account_id=uuid
 router.get('/', listProducts);

@@ -1,107 +1,165 @@
-import { Request, Response, NextFunction } from 'express';
-import axios from 'axios';
+import { NextFunction, Request, Response } from 'express';
 import Logger from '../utils/logger';
+import { corePlatform } from '../services/corePlatform.client';
+import { CorePlatformError, CorePlatformUser, Membership } from '../types/corePlatform';
 
-interface Membership {
-    organization: { id: string; name: string; slug?: string };
-    role: { id: number; name: string; slug?: string };
+/**
+ * Auth middleware chain — buybox delegates all identity to sd-core-platform.
+ *
+ * Three composable middlewares:
+ *
+ *   authenticate         Validates the session_id cookie against core-platform
+ *                        and attaches req.auth = { user, sessionId }.
+ *
+ *   resolveOrganization  Reads the x-organization-id header, verifies the
+ *                        user is actually a member of that org, and attaches
+ *                        req.auth.organization + req.auth.role. No silent
+ *                        fallback to "first membership" — the header must
+ *                        match a real membership, or 403.
+ *
+ *   requireSuperuser     Gates admin-only routes on req.auth.user.is_superuser.
+ *
+ * Usage in routes/index.ts:
+ *   router.use('/auth/me', authenticate, meHandler);
+ *   router.use('/products', authenticate, resolveOrganization, productRoutes);
+ *   router.use('/admin',    authenticate, resolveOrganization, requireSuperuser, adminRoutes);
+ */
+
+// ----- session cache ---------------------------------------------------------
+
+const SESSION_CACHE_TTL_MS = Number(process.env.SESSION_CACHE_TTL_MS) || 60_000;
+const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'session_id';
+
+interface CacheEntry {
+    user: CorePlatformUser;
+    expiresAt: number;
 }
 
-interface CachedUserData {
-    id: string;
-    email: string;
-    name: string;
-    is_superuser?: boolean;
-    memberships: Membership[];
-}
+const sessionCache = new Map<string, CacheEntry>();
 
-// In-memory session cache with 5-min TTL
-const sessionCache = new Map<string, { user: CachedUserData; expiresAt: number }>();
-const CACHE_TTL_MS = 5 * 60 * 1000;
-
-function getCachedUserData(sessionId: string): CachedUserData | null {
-    const cached = sessionCache.get(sessionId);
-    if (cached && cached.expiresAt > Date.now()) {
-        return cached.user;
-    }
-    if (cached) {
+function cacheGet(sessionId: string): CorePlatformUser | null {
+    const entry = sessionCache.get(sessionId);
+    if (!entry) return null;
+    if (entry.expiresAt <= Date.now()) {
         sessionCache.delete(sessionId);
+        return null;
     }
-    return null;
+    return entry.user;
 }
 
-function cacheUserData(sessionId: string, user: CachedUserData): void {
-    sessionCache.set(sessionId, {
-        user,
-        expiresAt: Date.now() + CACHE_TTL_MS,
-    });
+function cacheSet(sessionId: string, user: CorePlatformUser): void {
+    sessionCache.set(sessionId, { user, expiresAt: Date.now() + SESSION_CACHE_TTL_MS });
 }
 
-export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
+export function clearSessionCache(sessionId?: string): void {
+    if (sessionId) sessionCache.delete(sessionId);
+    else sessionCache.clear();
+}
+
+// ----- error envelope --------------------------------------------------------
+
+type AuthErrorCode =
+    | 'UNAUTHENTICATED'
+    | 'AUTH_UPSTREAM_UNAVAILABLE'
+    | 'ORG_REQUIRED'
+    | 'ORG_FORBIDDEN'
+    | 'SUPERUSER_REQUIRED';
+
+function authError(res: Response, status: number, code: AuthErrorCode, message: string) {
+    return res.status(status).json({ status: 'error', error: { code, message } });
+}
+
+// ----- authenticate ----------------------------------------------------------
+
+export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+    const sessionId: string | undefined = req.cookies?.[SESSION_COOKIE_NAME];
+
+    if (!sessionId) {
+        return authError(res, 401, 'UNAUTHENTICATED', 'Authentication required');
+    }
+
+    const cached = cacheGet(sessionId);
+    if (cached) {
+        req.auth = { user: cached, sessionId };
+        return next();
+    }
 
     try {
-        const sessionId = req.cookies.session_id;
-
-        if (!sessionId) {
-            return res.status(401).json({ status: 'error', message: 'Authentication required' });
-        }
-
-        let cached = getCachedUserData(sessionId);
-
-        if (!cached) {
-            const corePlatformUrl = process.env.CORE_PLATFORM_INTERNAL_URL || process.env.CORE_PLATFORM_URL;
-            if (!corePlatformUrl) {
-                Logger.error('CORE_PLATFORM_URL not configured');
-                return res.status(500).json({ status: 'error', message: 'Authentication service unavailable' });
+        const user = await corePlatform.session.validate(sessionId, {
+            userAgent: req.headers['user-agent'] || undefined,
+            ip: req.ip || undefined,
+        });
+        cacheSet(sessionId, user);
+        req.auth = { user, sessionId };
+        return next();
+    } catch (error) {
+        if (error instanceof CorePlatformError) {
+            if (error.isUnauthorized) {
+                clearSessionCache(sessionId);
+                res.clearCookie(SESSION_COOKIE_NAME);
+                return authError(res, 401, 'UNAUTHENTICATED', 'Session expired');
             }
-
-            const response = await axios.get(`${corePlatformUrl}/auth/me`, {
-                headers: {
-                    Cookie: `session_id=${sessionId}`,
-                    'User-Agent': req.headers['user-agent'] || '',
-                    'X-Forwarded-For': req.ip || '',
-                },
-                timeout: 30000,
-            });
-
-            const userData = response.data?.user || response.data;
-            if (!userData || !userData.id) {
-                return res.status(401).json({ status: 'error', message: 'Invalid session' });
+            if (error.isUpstreamUnavailable) {
+                Logger.error('Core-platform auth upstream unavailable', { code: error.code, message: error.message });
+                return authError(res, 503, 'AUTH_UPSTREAM_UNAVAILABLE', 'Authentication service temporarily unavailable');
             }
-
-            cached = {
-                id: userData.id,
-                email: userData.email,
-                name: userData.full_name || userData.name,
-                is_superuser: userData.is_superuser,
-                memberships: userData.memberships || [],
-            };
-
-            cacheUserData(sessionId, cached);
         }
-
-        // Resolve organization_id: prefer header, fall back to first membership
-        let orgId = req.headers['x-organization-id'] as string;
-        if (!orgId && cached.memberships.length > 0) {
-            orgId = cached.memberships[0].organization?.id;
-        }
-
-        req.user = {
-            id: cached.id,
-            email: cached.email,
-            name: cached.name,
-            organization_id: orgId,
-            is_superuser: cached.is_superuser,
-            memberships: cached.memberships,
-        };
-        next();
-    } catch (error: any) {
-        if (error.response?.status === 401) {
-            return res.status(401).json({ status: 'error', message: 'Session expired' });
-        }
-        Logger.error('Auth middleware error:', error.message);
-        return res.status(500).json({ status: 'error', message: 'Authentication service error' });
+        Logger.error('Unexpected error in authenticate middleware', {
+            error: error instanceof Error ? error.message : String(error),
+        });
+        return authError(res, 500, 'UNAUTHENTICATED', 'Authentication failed');
     }
-};
+}
 
-export const clearSessionCache = () => sessionCache.clear();
+// ----- resolveOrganization ---------------------------------------------------
+
+function findMembership(memberships: Membership[], orgId: string): Membership | undefined {
+    return memberships.find((m) => m.organization?.id === orgId);
+}
+
+export function resolveOrganization(req: Request, res: Response, next: NextFunction): void | Response {
+    if (!req.auth) {
+        // Programmer error — authenticate must run first.
+        Logger.error('resolveOrganization called before authenticate');
+        return authError(res, 500, 'UNAUTHENTICATED', 'Auth middleware misconfigured');
+    }
+
+    const memberships = req.auth.user.memberships ?? [];
+    const headerOrgId = (req.headers['x-organization-id'] as string | undefined)?.trim();
+
+    let membership: Membership | undefined;
+
+    if (headerOrgId) {
+        membership = findMembership(memberships, headerOrgId);
+        if (!membership) {
+            return authError(res, 403, 'ORG_FORBIDDEN', 'You do not have access to this organization');
+        }
+    } else if (memberships.length === 1) {
+        membership = memberships[0];
+    } else if (memberships.length === 0) {
+        return authError(res, 403, 'ORG_FORBIDDEN', 'User has no organization memberships');
+    } else {
+        return authError(
+            res,
+            400,
+            'ORG_REQUIRED',
+            'x-organization-id header is required when user belongs to multiple organizations'
+        );
+    }
+
+    req.auth.organization = membership.organization;
+    req.auth.role = membership.role;
+    return next();
+}
+
+// ----- requireSuperuser ------------------------------------------------------
+
+export function requireSuperuser(req: Request, res: Response, next: NextFunction): void | Response {
+    if (!req.auth?.user) {
+        return authError(res, 401, 'UNAUTHENTICATED', 'Authentication required');
+    }
+    if (!req.auth.user.is_superuser) {
+        return authError(res, 403, 'SUPERUSER_REQUIRED', 'Superuser access required');
+    }
+    return next();
+}

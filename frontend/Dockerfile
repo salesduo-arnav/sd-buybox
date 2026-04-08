@@ -5,8 +5,8 @@ ARG VITE_CORE_PLATFORM_URL
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci
+COPY package.json ./
+RUN npm install --no-audit --no-fund
 
 COPY . .
 RUN npm run build

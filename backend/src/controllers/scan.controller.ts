@@ -13,7 +13,7 @@ import { SCAN_TRIGGERS, SCAN_STATUSES } from '../config/constants';
 export const triggerScan = async (req: Request, res: Response) => {
     try {
         const { account_id, marketplace = 'US' } = req.body;
-        const organizationId = req.user!.organization_id;
+        const organizationId = req.auth!.organization!.id;
 
         // Check for active scans
         const activeScan = await Scan.findOne({
@@ -47,7 +47,7 @@ export const triggerScan = async (req: Request, res: Response) => {
 
 export const listScans = async (req: Request, res: Response) => {
     try {
-        const organizationId = req.user!.organization_id;
+        const organizationId = req.auth!.organization!.id;
         const { account_id } = req.query;
 
         const where: Record<string, unknown> = { organization_id: organizationId };

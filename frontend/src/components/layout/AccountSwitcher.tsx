@@ -1,11 +1,23 @@
 import { ChevronsUpDown, Check } from "lucide-react";
 import { useAccount } from "@/contexts/AccountContext";
+import { IntegrationAccount } from "@/types/Account";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+/**
+ * Build a short subtitle line for an integration account, derived from
+ * whichever metadata core-platform returned. Fields are optional, so we
+ * filter out empty segments instead of rendering "undefined" placeholders.
+ */
+function accountSubtitle(account: IntegrationAccount): string {
+  return [account.integration_type?.toUpperCase(), account.region, account.marketplace]
+    .filter(Boolean)
+    .join(" \u00b7 ");
+}
 
 export function AccountSwitcher() {
   const { accounts, activeAccount, switchAccount } = useAccount();
@@ -31,9 +43,7 @@ export function AccountSwitcher() {
             </p>
             {activeAccount && (
               <p className="text-[10px] text-sidebar-foreground/60">
-                {activeAccount.account_type.toUpperCase()} &middot;{" "}
-                {activeAccount.marketplace_region} &middot;{" "}
-                {activeAccount.platform}
+                {accountSubtitle(activeAccount)}
               </p>
             )}
           </div>
@@ -49,8 +59,7 @@ export function AccountSwitcher() {
             <div className="flex-1">
               <p className="text-sm font-medium">{account.account_name}</p>
               <p className="text-xs text-muted-foreground">
-                {account.account_type.toUpperCase()} &middot;{" "}
-                {account.marketplace_region} &middot; {account.platform}
+                {accountSubtitle(account)}
               </p>
             </div>
             {activeAccount?.id === account.id && (

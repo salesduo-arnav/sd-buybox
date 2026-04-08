@@ -1,7 +1,16 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { IntegrationAccount } from "@/types/Account";
-import { SettingsService } from "@/services/SettingsService";
+import { IntegrationsService } from "@/services/IntegrationsService";
+import { LS } from "@/lib/localStorageKeys";
 import { useAuth } from "./AuthContext";
+
+/**
+ * AccountContext
+ *
+ * Tracks the user's connected integration accounts (as known by sd-core-platform)
+ * and the "active" account for scoping buybox feature pages. Derived from
+ * AuthContext — we refetch whenever the active org changes.
+ */
 
 interface AccountContextType {
   accounts: IntegrationAccount[];
@@ -27,19 +36,20 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAccounts = useCallback(async () => {
     try {
-      const { data } = await SettingsService.listAccounts();
+      const { data } = await IntegrationsService.listAccounts();
       setAccounts(data);
 
-      const savedId = localStorage.getItem("activeIntegrationAccountId");
-      const match = data.find((a: IntegrationAccount) => a.id === savedId);
+      const savedId = localStorage.getItem(LS.accountId);
+      const match = data.find((a) => a.id === savedId);
 
       if (match) {
         setActiveAccount(match);
       } else if (data.length > 0) {
         setActiveAccount(data[0]);
-        localStorage.setItem("activeIntegrationAccountId", data[0].id);
+        localStorage.setItem(LS.accountId, data[0].id);
       } else {
         setActiveAccount(null);
+        localStorage.removeItem(LS.accountId);
       }
     } catch {
       setAccounts([]);
@@ -52,18 +62,21 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const switchAccount = useCallback(
     (accountId: string) => {
       const account = accounts.find((a) => a.id === accountId);
-      if (account) {
-        setActiveAccount(account);
-        localStorage.setItem("activeIntegrationAccountId", accountId);
-      }
+      if (!account) return;
+      setActiveAccount(account);
+      localStorage.setItem(LS.accountId, accountId);
     },
     [accounts]
   );
 
-  // Re-fetch accounts when authenticated or when org changes
+  // Refetch when authentication or active organization changes.
   useEffect(() => {
     if (isAuthenticated && activeOrganization) {
       refreshAccounts();
+    } else {
+      setAccounts([]);
+      setActiveAccount(null);
+      setIsLoading(false);
     }
   }, [isAuthenticated, activeOrganization?.id, refreshAccounts]);
 

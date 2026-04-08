@@ -6,12 +6,9 @@ import { handleError } from '../utils/handle_error';
  *
  * GET /api/visibility/overview  — Dashboard overview (KPIs, charts, loss breakdown)
  */
-export const getOverview = async (req: Request, res: Response) => {
+export const getOverview = async (_req: Request, res: Response) => {
     try {
-        const organizationId = req.user!.organization_id;
-        const { period = 'last_30_days', account_id } = req.query;
-
-        // TODO: Call metricsService.getOverview(...)
+        // TODO: Call metricsService.getOverview(...) using req.auth.organization.id, period, account_id
 
         res.json({
             status: 'success',

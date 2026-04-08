@@ -2,7 +2,7 @@
 
 # Development
 dev-db:
-	docker-compose up --build -d postgres
+	docker-compose up --build -d buybox-db
 
 dev:
 	docker-compose up --build

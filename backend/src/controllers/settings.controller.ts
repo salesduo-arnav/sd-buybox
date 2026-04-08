@@ -28,7 +28,7 @@ export const getSettings = async (req: Request, res: Response) => {
 export const updateSettings = async (req: Request, res: Response) => {
     try {
         const { accountId } = req.params;
-        const organizationId = req.user!.organization_id;
+        const organizationId = req.auth!.organization!.id;
 
         const [config, created] = await TrackerConfig.findOrCreate({
             where: { integration_account_id: accountId },
