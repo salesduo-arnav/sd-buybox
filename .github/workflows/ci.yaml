@@ -121,51 +121,51 @@ jobs:
         run: docker network create salesduo-net || true
 
       - name: Build Docker Images
-        run: docker compose build
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build
 
       - name: Start Services
         run: |
-          docker compose up -d
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
           echo "Waiting for services to initialize..."
           sleep 15
-          docker compose ps
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml ps
 
       - name: Debug Containers
         if: always()
         run: |
           echo "=== Docker PS ==="
-          docker compose ps
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml ps
           echo "=== All Containers ==="
           docker ps -a
           echo "=== Backend Logs ==="
-          docker compose logs backend || true
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml logs backend || true
           echo "=== Postgres Logs ==="
-          docker compose logs buybox-db || true
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml logs buybox-db || true
 
       - name: Prepare Backend Test Database
         run: |
           set -a; source .env; set +a
           echo "Waiting for Postgres to be ready..."
           for i in $(seq 1 30); do
-            if docker compose exec -T buybox-db pg_isready -U "$PGUSER" -d "$PGDATABASE"; then
+            if docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T buybox-db pg_isready -U "$PGUSER" -d "$PGDATABASE"; then
               break
             fi
             echo "Waiting for postgres... ($i/30)"
             sleep 2
           done
-          docker compose exec -T buybox-db pg_isready -U "$PGUSER" -d "$PGDATABASE" || { echo "::error::Postgres did not become ready"; exit 1; }
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T buybox-db pg_isready -U "$PGUSER" -d "$PGDATABASE" || { echo "::error::Postgres did not become ready"; exit 1; }
           echo "Creating test database 'buybox_test'..."
-          docker compose exec -T buybox-db psql -U "$PGUSER" -d "$PGDATABASE" -c "SELECT 1 FROM pg_database WHERE datname = 'buybox_test'" | grep -q 1 \
-            || docker compose exec -T buybox-db createdb -U "$PGUSER" buybox_test
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T buybox-db psql -U "$PGUSER" -d "$PGDATABASE" -c "SELECT 1 FROM pg_database WHERE datname = 'buybox_test'" | grep -q 1 \
+            || docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T buybox-db createdb -U "$PGUSER" buybox_test
 
       - name: Run Backend Tests
         run: |
           set -o pipefail
-          docker compose exec -T backend npm test 2>&1 | tee backend_report.md
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T backend npm test 2>&1 | tee backend_report.md
 
       - name: Teardown
         if: always()
-        run: docker compose down
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down
 
       - name: Upload Test Reports
         if: always()
