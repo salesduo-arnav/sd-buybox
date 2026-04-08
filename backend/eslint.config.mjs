@@ -13,7 +13,8 @@ export default [
     },
     {
         rules: {
-            "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+            "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+            "@typescript-eslint/no-empty-object-type": "off"
         }
     }
 ];

@@ -1,5 +1,4 @@
 import Logger from '../utils/logger';
-import { JOB_NAMES } from '../config/constants';
 
 /**
  * Scheduler Service

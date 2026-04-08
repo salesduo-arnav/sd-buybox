@@ -13,7 +13,7 @@ export const listProducts = async (req: Request, res: Response) => {
     try {
         const organizationId = req.auth!.organization!.id;
         const pagination = parsePagination(req.query);
-        const { search, account_id } = req.query;
+        const { account_id } = req.query;
 
         const where: Record<string, unknown> = { organization_id: organizationId };
         if (account_id) where.integration_account_id = account_id;

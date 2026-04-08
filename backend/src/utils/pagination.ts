@@ -19,11 +19,11 @@ export interface PaginatedResult<T> {
     };
 }
 
-export function parsePagination(query: Record<string, any>): PaginationParams {
+export function parsePagination(query: Record<string, unknown>): PaginationParams {
     return {
-        page: Math.max(1, parseInt(query.page) || 1),
-        limit: Math.min(100, Math.max(1, parseInt(query.limit) || 20)),
-        sortBy: query.sortBy || 'created_at',
+        page: Math.max(1, parseInt(String(query.page ?? ''), 10) || 1),
+        limit: Math.min(100, Math.max(1, parseInt(String(query.limit ?? ''), 10) || 20)),
+        sortBy: typeof query.sortBy === 'string' ? query.sortBy : 'created_at',
         sortOrder: query.sortOrder === 'ASC' ? 'ASC' : 'DESC',
     };
 }
