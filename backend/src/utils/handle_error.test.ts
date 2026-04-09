@@ -32,7 +32,7 @@ describe('apiSuccess', () => {
 
     it('honors an explicit status code', () => {
         const res = createMockResponse();
-        apiSuccess(res, { id: 'abc' }, 201);
+        apiSuccess(res, { id: 'abc' }, { statusCode: 201 });
         expect(res.status).toHaveBeenCalledWith(201);
     });
 
@@ -40,6 +40,16 @@ describe('apiSuccess', () => {
         const res = createMockResponse();
         apiSuccess(res, null);
         expect(res.json).toHaveBeenCalledWith({ status: 'success', data: null });
+    });
+
+    it('includes meta when provided', () => {
+        const res = createMockResponse();
+        apiSuccess(res, { id: 'abc' }, { meta: { clamped_fields: ['slack_alerts_enabled'] } });
+        expect(res.json).toHaveBeenCalledWith({
+            status: 'success',
+            data: { id: 'abc' },
+            meta: { clamped_fields: ['slack_alerts_enabled'] },
+        });
     });
 });
 

@@ -1,9 +1,11 @@
 // Catalog Service
 //
-// Manages product catalog sync from SP-API:
-//   - Refreshes product titles, images
-//   - Updates estimated_daily_units from Sales & Traffic Report
-//   - Detects new ASINs
+// Syncs product metadata and sales velocity from SP-API.
+//
+// When implemented, syncProducts should enforce the tracked_asins limit
+// inside the same transaction as the insert: call entitlements.snapshot,
+// COUNT(*) products for the org, and use entitlements.requireCapacity
+// with LIMIT.TRACKED_ASINS before each insert.
 
 class CatalogService {
     // TODO: Implement syncProducts(integrationAccountId, credentials)

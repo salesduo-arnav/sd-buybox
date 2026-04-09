@@ -60,6 +60,12 @@ export const env = {
         auditTimeoutMs: positiveInt('CORE_PLATFORM_AUDIT_TIMEOUT_MS', 10_000),
     },
 
+    entitlements: {
+        // Snapshot cache TTL. A downgrade on core-platform is visible
+        // within this window without any webhook subscription.
+        cacheTtlMs: positiveInt('ENTITLEMENTS_CACHE_TTL_MS', 60_000),
+    },
+
     jobQueue: {
         retryLimit: positiveInt('JOB_QUEUE_RETRY_LIMIT', 3),
         retryDelaySeconds: positiveInt('JOB_QUEUE_RETRY_DELAY_SECONDS', 30),
