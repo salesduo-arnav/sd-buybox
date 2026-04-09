@@ -1,7 +1,12 @@
-import winston from 'winston';
 import path from 'path';
+import winston from 'winston';
+import { env } from '../config/env';
 
-const levels = {
+// Winston logger. Logs to stdout in all environments and rotates a file
+// transport under logs/app.log. Levels beyond the standard set ('http',
+// 'debug') let us separate request logs from debug spam.
+
+const LOG_LEVELS = {
     error: 0,
     warn: 1,
     info: 2,
@@ -9,14 +14,7 @@ const levels = {
     debug: 4,
 };
 
-const level = () => {
-    if (process.env.LOG_LEVEL) return process.env.LOG_LEVEL;
-    const env = process.env.NODE_ENV || 'development';
-    const isDevelopment = env === 'development';
-    return isDevelopment ? 'debug' : 'http';
-};
-
-const colors = {
+const LEVEL_COLORS = {
     error: 'red',
     warn: 'yellow',
     info: 'green',
@@ -24,13 +22,19 @@ const colors = {
     debug: 'white',
 };
 
-winston.addColors(colors);
+winston.addColors(LEVEL_COLORS);
 
-const format = winston.format.combine(
+function resolveLogLevel(): string {
+    if (env.logger.level) return env.logger.level;
+    return env.isProduction ? 'http' : 'debug';
+}
+
+const logFormat = winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
     winston.format.printf((info) => {
         const { timestamp, level, message, ...meta } = info;
-        return `${timestamp} [${level}]: ${message} ${Object.keys(meta).length ? JSON.stringify(meta) : ''}`;
+        const metaString = Object.keys(meta).length ? JSON.stringify(meta) : '';
+        return `${timestamp} [${level}]: ${message} ${metaString}`;
     })
 );
 
@@ -38,15 +42,15 @@ const transports: winston.transport[] = [
     new winston.transports.Console(),
     new winston.transports.File({
         filename: path.join(__dirname, '../../logs/app.log'),
-        maxsize: 5 * 1024 * 1024, // 5MB
-        maxFiles: 3,
+        maxsize: env.logger.fileMaxSizeBytes,
+        maxFiles: env.logger.fileMaxFiles,
     }),
 ];
 
 const Logger = winston.createLogger({
-    level: level(),
-    levels,
-    format,
+    level: resolveLogLevel(),
+    levels: LOG_LEVELS,
+    format: logFormat,
     transports,
 });
 

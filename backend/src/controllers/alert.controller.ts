@@ -1,28 +1,28 @@
 import { Request, Response } from 'express';
 import { Alert } from '../models';
 import { parsePagination, paginateQuery, buildPaginatedResult } from '../utils/pagination';
-import { handleError } from '../utils/handle_error';
+import { handleError, apiSuccess, apiError } from '../utils/handle_error';
+import { getOrganizationId } from '../utils/request_auth';
 
-/**
- * Alert Controller
- *
- * GET   /api/alerts            — List alerts (filterable by severity, read status)
- * PATCH /api/alerts/:id/read   — Mark alert as read
- * PATCH /api/alerts/read-all   — Mark all alerts as read
- */
+// Alert Controller
+//
+// GET   /api/alerts            — List alerts (filterable by severity, read status)
+// PATCH /api/alerts/:id/read   — Mark alert as read
+// PATCH /api/alerts/read-all   — Mark all alerts as read
+
 export const listAlerts = async (req: Request, res: Response) => {
     try {
-        const organizationId = req.auth!.organization!.id;
+        const organizationId = getOrganizationId(req);
         const pagination = parsePagination(req.query);
-        const { severity, is_read, account_id } = req.query;
+        const { severity, is_read: isReadFilter, account_id: accountIdFilter } = req.query;
 
-        const where: Record<string, unknown> = { organization_id: organizationId };
-        if (severity) where.severity = severity;
-        if (is_read !== undefined) where.is_read = is_read === 'true';
-        if (account_id) where.integration_account_id = account_id;
+        const whereClause: Record<string, unknown> = { organization_id: organizationId };
+        if (severity) whereClause.severity = severity;
+        if (isReadFilter !== undefined) whereClause.is_read = isReadFilter === 'true';
+        if (accountIdFilter) whereClause.integration_account_id = accountIdFilter;
 
         const { count, rows } = await Alert.findAndCountAll({
-            where,
+            where: whereClause,
             ...paginateQuery(pagination),
             include: [{ association: 'product', attributes: ['id', 'asin', 'title', 'image_url'] }],
         });
@@ -35,15 +35,19 @@ export const listAlerts = async (req: Request, res: Response) => {
 
 export const markAsRead = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
-        const alert = await Alert.findByPk(id);
+        const { id: alertId } = req.params;
+        const organizationId = getOrganizationId(req);
+
+        const alert = await Alert.findOne({
+            where: { id: alertId, organization_id: organizationId },
+        });
 
         if (!alert) {
-            return res.status(404).json({ status: 'error', message: 'Alert not found' });
+            return apiError(res, 404, 'NOT_FOUND', 'Alert not found');
         }
 
         await alert.update({ is_read: true });
-        res.json({ status: 'success', data: alert });
+        return apiSuccess(res, alert);
     } catch (error) {
         handleError(res, error, 'markAsRead');
     }
@@ -51,9 +55,12 @@ export const markAsRead = async (req: Request, res: Response) => {
 
 export const markAllAsRead = async (req: Request, res: Response) => {
     try {
-        const organizationId = req.auth!.organization!.id;
-        await Alert.update({ is_read: true }, { where: { organization_id: organizationId, is_read: false } });
-        res.json({ status: 'success', message: 'All alerts marked as read' });
+        const organizationId = getOrganizationId(req);
+        const [updatedCount] = await Alert.update(
+            { is_read: true },
+            { where: { organization_id: organizationId, is_read: false } }
+        );
+        return apiSuccess(res, { updated: updatedCount });
     } catch (error) {
         handleError(res, error, 'markAllAsRead');
     }

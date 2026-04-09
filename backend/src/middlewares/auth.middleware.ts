@@ -1,40 +1,40 @@
 import { NextFunction, Request, Response } from 'express';
 import Logger from '../utils/logger';
+import { env } from '../config/env';
 import { corePlatform } from '../services/corePlatform.client';
 import { CorePlatformError, CorePlatformUser, Membership } from '../types/corePlatform';
+import { apiError } from '../utils/handle_error';
 
-/**
- * Auth middleware chain — buybox delegates all identity to sd-core-platform.
- *
- * Three composable middlewares:
- *
- *   authenticate         Validates the session_id cookie against core-platform
- *                        and attaches req.auth = { user, sessionId }.
- *
- *   resolveOrganization  Reads the x-organization-id header, verifies the
- *                        user is actually a member of that org, and attaches
- *                        req.auth.organization + req.auth.role. No silent
- *                        fallback to "first membership" — the header must
- *                        match a real membership, or 403.
- *
- *   requireSuperuser     Gates admin-only routes on req.auth.user.is_superuser.
- *
- * Usage in routes/index.ts:
- *   router.use('/auth/me', authenticate, meHandler);
- *   router.use('/products', authenticate, resolveOrganization, productRoutes);
- *   router.use('/admin',    authenticate, resolveOrganization, requireSuperuser, adminRoutes);
- */
+// Auth middleware chain — buybox delegates all identity to sd-core-platform.
+//
+// Three composable middlewares:
+//
+//   authenticate         Validates the session cookie against core-platform
+//                        and attaches req.auth = { user, sessionId }.
+//
+//   resolveOrganization  Reads the x-organization-id header, verifies the
+//                        user is actually a member of that org, and attaches
+//                        req.auth.organization + req.auth.role. A user with
+//                        exactly one membership falls through to it by
+//                        default for better single-tenant UX.
+//
+//   requireSuperuser     Gates admin-only routes on req.auth.user.is_superuser.
+//
+// Usage in routes/index.ts:
+//   router.use('/auth/me', authenticate, meHandler);
+//   router.use('/products', authenticate, resolveOrganization, productRoutes);
+//   router.use('/admin', authenticate, resolveOrganization, requireSuperuser, adminRoutes);
 
-// ----- session cache ---------------------------------------------------------
-
-const SESSION_CACHE_TTL_MS = Number(process.env.SESSION_CACHE_TTL_MS) || 60_000;
-const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'session_id';
+// Bounded session cache
 
 interface CacheEntry {
     user: CorePlatformUser;
     expiresAt: number;
 }
 
+// LRU-ish cache: capped at env.session.cacheMaxEntries. When full we evict
+// the oldest entry (Map preserves insertion order). This caps memory
+// regardless of how many distinct session ids we see.
 const sessionCache = new Map<string, CacheEntry>();
 
 function cacheGet(sessionId: string): CorePlatformUser | null {
@@ -48,39 +48,41 @@ function cacheGet(sessionId: string): CorePlatformUser | null {
 }
 
 function cacheSet(sessionId: string, user: CorePlatformUser): void {
-    sessionCache.set(sessionId, { user, expiresAt: Date.now() + SESSION_CACHE_TTL_MS });
+    if (sessionCache.size >= env.session.cacheMaxEntries) {
+        const oldestKey = sessionCache.keys().next().value;
+        if (oldestKey) sessionCache.delete(oldestKey);
+    }
+    sessionCache.set(sessionId, { user, expiresAt: Date.now() + env.session.cacheTtlMs });
 }
 
-export function clearSessionCache(sessionId?: string): void {
-    if (sessionId) sessionCache.delete(sessionId);
-    else sessionCache.clear();
+export function clearSessionCache(sessionId: string): void {
+    sessionCache.delete(sessionId);
 }
 
-// ----- error envelope --------------------------------------------------------
+// Authenticate
 
 type AuthErrorCode =
     | 'UNAUTHENTICATED'
     | 'AUTH_UPSTREAM_UNAVAILABLE'
     | 'ORG_REQUIRED'
     | 'ORG_FORBIDDEN'
-    | 'SUPERUSER_REQUIRED';
+    | 'SUPERUSER_REQUIRED'
+    | 'INTERNAL_ERROR';
 
 function authError(res: Response, status: number, code: AuthErrorCode, message: string) {
-    return res.status(status).json({ status: 'error', error: { code, message } });
+    return apiError(res, status, code, message);
 }
 
-// ----- authenticate ----------------------------------------------------------
-
 export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
-    const sessionId: string | undefined = req.cookies?.[SESSION_COOKIE_NAME];
+    const sessionId: string | undefined = req.cookies?.[env.session.cookieName];
 
     if (!sessionId) {
         return authError(res, 401, 'UNAUTHENTICATED', 'Authentication required');
     }
 
-    const cached = cacheGet(sessionId);
-    if (cached) {
-        req.auth = { user: cached, sessionId };
+    const cachedUser = cacheGet(sessionId);
+    if (cachedUser) {
+        req.auth = { user: cachedUser, sessionId };
         return next();
     }
 
@@ -96,46 +98,49 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
         if (error instanceof CorePlatformError) {
             if (error.isUnauthorized) {
                 clearSessionCache(sessionId);
-                res.clearCookie(SESSION_COOKIE_NAME);
+                res.clearCookie(env.session.cookieName);
                 return authError(res, 401, 'UNAUTHENTICATED', 'Session expired');
             }
             if (error.isUpstreamUnavailable) {
-                Logger.error('Core-platform auth upstream unavailable', { code: error.code, message: error.message });
+                Logger.error('Core-platform auth upstream unavailable', {
+                    code: error.code,
+                    message: error.message,
+                });
                 return authError(res, 503, 'AUTH_UPSTREAM_UNAVAILABLE', 'Authentication service temporarily unavailable');
             }
         }
         Logger.error('Unexpected error in authenticate middleware', {
             error: error instanceof Error ? error.message : String(error),
         });
-        return authError(res, 500, 'UNAUTHENTICATED', 'Authentication failed');
+        return authError(res, 500, 'INTERNAL_ERROR', 'Authentication failed');
     }
 }
 
-// ----- resolveOrganization ---------------------------------------------------
+// Resolve Organization
 
-function findMembership(memberships: Membership[], orgId: string): Membership | undefined {
-    return memberships.find((m) => m.organization?.id === orgId);
+function findMembership(memberships: Membership[], organizationId: string): Membership | undefined {
+    return memberships.find((membership) => membership.organization?.id === organizationId);
 }
 
 export function resolveOrganization(req: Request, res: Response, next: NextFunction): void | Response {
     if (!req.auth) {
         // Programmer error — authenticate must run first.
         Logger.error('resolveOrganization called before authenticate');
-        return authError(res, 500, 'UNAUTHENTICATED', 'Auth middleware misconfigured');
+        return authError(res, 500, 'INTERNAL_ERROR', 'Auth middleware misconfigured');
     }
 
     const memberships = req.auth.user.memberships ?? [];
-    const headerOrgId = (req.headers['x-organization-id'] as string | undefined)?.trim();
+    const requestedOrgId = (req.headers['x-organization-id'] as string | undefined)?.trim();
 
-    let membership: Membership | undefined;
+    let selectedMembership: Membership | undefined;
 
-    if (headerOrgId) {
-        membership = findMembership(memberships, headerOrgId);
-        if (!membership) {
+    if (requestedOrgId) {
+        selectedMembership = findMembership(memberships, requestedOrgId);
+        if (!selectedMembership) {
             return authError(res, 403, 'ORG_FORBIDDEN', 'You do not have access to this organization');
         }
     } else if (memberships.length === 1) {
-        membership = memberships[0];
+        selectedMembership = memberships[0];
     } else if (memberships.length === 0) {
         return authError(res, 403, 'ORG_FORBIDDEN', 'User has no organization memberships');
     } else {
@@ -147,12 +152,12 @@ export function resolveOrganization(req: Request, res: Response, next: NextFunct
         );
     }
 
-    req.auth.organization = membership.organization;
-    req.auth.role = membership.role;
+    req.auth.organization = selectedMembership.organization;
+    req.auth.role = selectedMembership.role;
     return next();
 }
 
-// ----- requireSuperuser ------------------------------------------------------
+// Require Superuser
 
 export function requireSuperuser(req: Request, res: Response, next: NextFunction): void | Response {
     if (!req.auth?.user) {

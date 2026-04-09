@@ -2,30 +2,21 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import { env, assertRequiredEnv } from './config/env';
 import { errorHandler } from './middlewares/error.middleware';
 import morganMiddleware from './middlewares/morgan.middleware';
 import routes from './routes';
-import { assertCorePlatformEnv } from './services/corePlatform.client';
-import './models'; // Initialize associations
+import './models'; // initialize model associations
 
-// Fail fast at boot if buybox can't reach core-platform.
-assertCorePlatformEnv();
+// Fail fast at boot if any required env var is missing.
+assertRequiredEnv();
 
 const app = express();
-
-const allowedOrigins = (process.env.CORS_ORIGINS ?? '')
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean);
-
-if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
-    throw new Error('CORS_ORIGINS must be set in production — buybox will not serve browsers without it.');
-}
 
 app.use(helmet());
 app.use(
     cors({
-        origin: allowedOrigins,
+        origin: env.corsOrigins,
         credentials: true,
     })
 );

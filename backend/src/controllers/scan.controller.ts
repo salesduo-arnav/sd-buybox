@@ -1,45 +1,60 @@
 import { Request, Response } from 'express';
 import { Scan } from '../models';
-import { handleError } from '../utils/handle_error';
+import { corePlatform } from '../services/corePlatform.client';
+import { handleError, apiSuccess, apiError } from '../utils/handle_error';
+import { getOrganizationId } from '../utils/request_auth';
 import { SCAN_TRIGGERS, SCAN_STATUSES } from '../config/constants';
 
-/**
- * Scan Controller
- *
- * POST /api/scans/trigger         — Manually trigger a scan
- * GET  /api/scans                 — List scans for an account
- * GET  /api/scans/:id             — Get scan details
- */
+// Scan Controller
+//
+// POST /api/scans/trigger  — Manually trigger a scan
+// GET  /api/scans          — List scans for an account
+// GET  /api/scans/:id      — Get scan details
+
+const DEFAULT_MARKETPLACE = 'US';
+const RECENT_SCANS_LIMIT = 20;
+
 export const triggerScan = async (req: Request, res: Response) => {
     try {
-        const { account_id, marketplace = 'US' } = req.body;
-        const organizationId = req.auth!.organization!.id;
+        const organizationId = getOrganizationId(req);
+        const { account_id: accountId, marketplace = DEFAULT_MARKETPLACE } = (req.body ?? {}) as {
+            account_id?: unknown;
+            marketplace?: unknown;
+        };
 
-        // Check for active scans
+        if (typeof accountId !== 'string' || !accountId) {
+            return apiError(res, 400, 'INVALID_REQUEST', 'account_id is required');
+        }
+        if (typeof marketplace !== 'string' || !marketplace) {
+            return apiError(res, 400, 'INVALID_REQUEST', 'marketplace must be a non-empty string');
+        }
+
+        const belongsToOrg = await corePlatform.integrations.accountBelongsToOrg(accountId, organizationId);
+        if (!belongsToOrg) {
+            return apiError(res, 404, 'NOT_FOUND', 'Account not found for this organization');
+        }
+
         const activeScan = await Scan.findOne({
             where: {
-                integration_account_id: account_id,
+                integration_account_id: accountId,
+                organization_id: organizationId,
                 status: [SCAN_STATUSES.QUEUED, SCAN_STATUSES.IN_PROGRESS],
             },
         });
 
         if (activeScan) {
-            return res.status(409).json({
-                status: 'error',
-                message: 'A scan is already in progress for this account',
-            });
+            return apiError(res, 409, 'SCAN_IN_PROGRESS', 'A scan is already in progress for this account');
         }
 
         const scan = await Scan.create({
-            integration_account_id: account_id,
+            integration_account_id: accountId,
             organization_id: organizationId,
             triggered_by: SCAN_TRIGGERS.MANUAL,
             marketplace,
         });
 
         // TODO: Enqueue buybox:account-scan job via pg-boss
-
-        res.status(201).json({ status: 'success', data: scan });
+        return apiSuccess(res, scan, 201);
     } catch (error) {
         handleError(res, error, 'triggerScan');
     }
@@ -47,19 +62,19 @@ export const triggerScan = async (req: Request, res: Response) => {
 
 export const listScans = async (req: Request, res: Response) => {
     try {
-        const organizationId = req.auth!.organization!.id;
-        const { account_id } = req.query;
+        const organizationId = getOrganizationId(req);
+        const { account_id: accountIdFilter } = req.query;
 
-        const where: Record<string, unknown> = { organization_id: organizationId };
-        if (account_id) where.integration_account_id = account_id;
+        const whereClause: Record<string, unknown> = { organization_id: organizationId };
+        if (accountIdFilter) whereClause.integration_account_id = accountIdFilter;
 
         const scans = await Scan.findAll({
-            where,
+            where: whereClause,
             order: [['created_at', 'DESC']],
-            limit: 20,
+            limit: RECENT_SCANS_LIMIT,
         });
 
-        res.json({ status: 'success', data: scans });
+        return apiSuccess(res, scans);
     } catch (error) {
         handleError(res, error, 'listScans');
     }
@@ -67,14 +82,18 @@ export const listScans = async (req: Request, res: Response) => {
 
 export const getScan = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
-        const scan = await Scan.findByPk(id);
+        const { id: scanId } = req.params;
+        const organizationId = getOrganizationId(req);
+
+        const scan = await Scan.findOne({
+            where: { id: scanId, organization_id: organizationId },
+        });
 
         if (!scan) {
-            return res.status(404).json({ status: 'error', message: 'Scan not found' });
+            return apiError(res, 404, 'NOT_FOUND', 'Scan not found');
         }
 
-        res.json({ status: 'success', data: scan });
+        return apiSuccess(res, scan);
     } catch (error) {
         handleError(res, error, 'getScan');
     }

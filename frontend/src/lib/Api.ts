@@ -70,8 +70,11 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // Backend error envelope: `{ status: 'error', error: { code, message } }`.
+    const serverMessage = (error.response?.data as { error?: { message?: string } } | undefined)?.error?.message;
+
     if (status && status >= 500) {
-      toast.error("Server error. Please try again later.");
+      toast.error(serverMessage || "Server error. Please try again later.");
     } else if (!error.response) {
       toast.error("Network error. Please check your connection.");
     }

@@ -1,14 +1,13 @@
-/**
- * Metrics Service
- *
- * Handles all dashboard aggregation queries:
- * - Average visibility %
- * - Total missed sales
- * - Products affected count
- * - Visibility timeline (chart data)
- * - Loss reason breakdown
- * - Trend calculations (vs previous period)
- */
+// Metrics Service
+//
+// Handles all dashboard aggregation queries:
+//   - Average visibility %
+//   - Total missed sales
+//   - Products affected count
+//   - Visibility timeline (chart data)
+//   - Loss reason breakdown
+//   - Trend calculations (vs previous period)
+
 class MetricsService {
     // TODO: Implement getOverview(organizationId, accountId, period)
     // TODO: Implement getProductVisibility(productId, period)

@@ -1,19 +1,16 @@
-/**
- * Type definitions mirroring the shapes returned by sd-core-platform.
- *
- * These are the authoritative shapes for everything the buybox backend
- * consumes from core-platform over HTTP. They live in one file so every
- * middleware, controller, and service imports from a single source of truth.
- *
- * Reference endpoints (sd-core-platform):
- *   - GET  /auth/me                                     -> CorePlatformUser
- *   - POST /auth/logout                                 -> void
- *   - GET  /internal/integrations/accounts?org_id=...   -> IntegrationAccountSummary[]
- *   - GET  /internal/integrations/accounts/:id/credentials -> IntegrationCredentials
- *   - POST /internal/audit-logs                         -> void
- *   - POST /internal/email/send                         -> void
- *   - POST /internal/slack/send-to-channel              -> void
- */
+// Type definitions mirroring the shapes returned by sd-core-platform.
+//
+// These are the authoritative shapes for everything the buybox backend
+// consumes from core-platform over HTTP. They live in one file so every
+// middleware, controller, and service imports from a single source of truth.
+//
+// Reference endpoints (sd-core-platform):
+//   GET  /auth/me                                    -> CorePlatformUser
+//   POST /auth/logout                                -> void
+//   GET  /internal/integrations/accounts?org_id=...  -> IntegrationAccountSummary[]
+//   POST /internal/audit-logs                        -> void
+//   POST /internal/email/send                        -> void
+//   POST /internal/slack/send-to-channel             -> void
 
 export interface Organization {
     id: string;
@@ -54,15 +51,6 @@ export interface IntegrationAccountSummary {
     connected_at?: string;
 }
 
-export interface IntegrationCredentials {
-    refresh_token: string;
-    client_id: string;
-    client_secret: string;
-    marketplace_id: string;
-    seller_id: string;
-    region: string;
-}
-
 export interface AuditLogEntry {
     actor_id: string;
     organization_id: string;
@@ -77,21 +65,19 @@ export interface SessionValidationContext {
     ip?: string;
 }
 
-/**
- * Normalized error class for all core-platform client failures.
- * Callers can distinguish upstream 4xx/5xx from network errors via `status`.
- */
+// Normalized error class for all core-platform client failures.
+// Callers distinguish upstream 4xx/5xx from network errors via `status`.
 export class CorePlatformError extends Error {
     readonly status: number | null;
     readonly code: string;
     readonly cause?: unknown;
 
-    constructor(message: string, opts: { status: number | null; code: string; cause?: unknown }) {
+    constructor(message: string, options: { status: number | null; code: string; cause?: unknown }) {
         super(message);
         this.name = 'CorePlatformError';
-        this.status = opts.status;
-        this.code = opts.code;
-        this.cause = opts.cause;
+        this.status = options.status;
+        this.code = options.code;
+        this.cause = options.cause;
     }
 
     get isUpstreamUnavailable(): boolean {
