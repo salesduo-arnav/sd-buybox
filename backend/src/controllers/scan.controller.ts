@@ -4,6 +4,7 @@ import { corePlatform } from '../services/corePlatform.client';
 import { handleError, apiSuccess, apiError } from '../utils/handle_error';
 import { getOrganizationId } from '../utils/request_auth';
 import { SCAN_TRIGGERS, SCAN_STATUSES } from '../config/constants';
+import { entitlements, EntitlementError, LIMIT } from '../services/entitlements';
 
 // Scan Controller
 //
@@ -46,6 +47,15 @@ export const triggerScan = async (req: Request, res: Response) => {
             return apiError(res, 409, 'SCAN_IN_PROGRESS', 'A scan is already in progress for this account');
         }
 
+        // Only manual scans count against the monthly quota. Scheduled
+        // scans are gated by the update_frequency tier instead.
+        try {
+            await entitlements.consume(organizationId, LIMIT.SCANS_PER_MONTH);
+        } catch (err) {
+            if (err instanceof EntitlementError) return err.send(res);
+            throw err;
+        }
+
         const scan = await Scan.create({
             integration_account_id: accountId,
             organization_id: organizationId,
@@ -54,7 +64,7 @@ export const triggerScan = async (req: Request, res: Response) => {
         });
 
         // TODO: Enqueue buybox:account-scan job via pg-boss
-        return apiSuccess(res, scan, 201);
+        return apiSuccess(res, scan, { statusCode: 201 });
     } catch (error) {
         handleError(res, error, 'triggerScan');
     }

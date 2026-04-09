@@ -6,10 +6,14 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AccountProvider } from "@/contexts/AccountContext";
+import { EntitlementsProvider } from "@/contexts/EntitlementsContext";
 import { useAuth } from "@/contexts/auth";
+import { useEntitlements } from "@/contexts/entitlements";
+import { useIsLocked } from "@/hooks/useEntitlements";
 import { redirectToLogin } from "@/lib/authRedirect";
 import Layout from "@/components/layout/Layout";
 import Landing from "@/pages/Landing";
+import { LockedShell } from "@/components/entitlements";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,6 +26,8 @@ const queryClient = new QueryClient({
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const { isLoading: entitlementsLoading } = useEntitlements();
+  const isLocked = useIsLocked();
   const location = useLocation();
 
   useEffect(() => {
@@ -30,7 +36,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, isAuthenticated, location.pathname, location.search]);
 
-  if (isLoading) {
+  if (isLoading || (isAuthenticated && entitlementsLoading)) {
     return (
       <div className="flex h-full items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
@@ -45,6 +51,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+
+  if (isLocked) return <LockedShell />;
 
   return <>{children}</>;
 }
@@ -137,14 +145,16 @@ function AppRoutes() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <AccountProvider>
-        <TooltipProvider>
-          <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </TooltipProvider>
-      </AccountProvider>
+      <EntitlementsProvider>
+        <AccountProvider>
+          <TooltipProvider>
+            <Sonner />
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </TooltipProvider>
+        </AccountProvider>
+      </EntitlementsProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

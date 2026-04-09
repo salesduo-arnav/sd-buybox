@@ -2,11 +2,14 @@ import Logger from '../utils/logger';
 
 // Scheduler Service
 //
-// Manages the pg-boss schedule tick:
-//   - Registers recurring SCHEDULE_TICK job
-//   - Queries tracker_configs for due accounts
-//   - Enqueues ACCOUNT_SCAN jobs
-//   - Calculates next_scheduled_run_at
+// Registers the schedule-tick pg-boss handler, queries tracker_configs
+// for due accounts, and enqueues ACCOUNT_SCAN jobs.
+//
+// When implemented, the tick handler should:
+//   - call entitlements.snapshot(orgId) per due row
+//   - skip rows where snapshot.hasAny is false (no active subscription)
+//   - clamp tracker_config.update_frequency with entitlements.clampFrequency
+//   - use entitlements.retentionDays(snapshot) in the cleanup job
 
 class SchedulerService {
     async registerJobHandlers(): Promise<void> {

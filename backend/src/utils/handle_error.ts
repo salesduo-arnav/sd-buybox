@@ -4,14 +4,29 @@ import { CorePlatformError } from '../types/corePlatform';
 
 // Shared API response envelope helpers.
 //
-//   success: { status: 'success', data: T }
+//   success: { status: 'success', data: T, meta?: object }
 //   error:   { status: 'error',   error: { code, message } }
 //
 // Every response from buybox uses one of these two shapes so the frontend
 // has exactly one place to parse.
+//
+// `meta` is optional and used by controllers that silently clamp/strip
+// restricted fields (e.g. settings.updateSettings) so the frontend can toast.
 
-export function apiSuccess<T>(res: Response, data: T, statusCode = 200): Response {
-    return res.status(statusCode).json({ status: 'success', data });
+export interface ApiSuccessOptions {
+    statusCode?: number;
+    meta?: Record<string, unknown>;
+}
+
+export function apiSuccess<T>(
+    res: Response,
+    data: T,
+    opts: ApiSuccessOptions = {}
+): Response {
+    const { statusCode = 200, meta } = opts;
+    const body: Record<string, unknown> = { status: 'success', data };
+    if (meta) body.meta = meta;
+    return res.status(statusCode).json(body);
 }
 
 export function apiError(res: Response, statusCode: number, code: string, message: string): Response {

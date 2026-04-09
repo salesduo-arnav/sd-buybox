@@ -5,6 +5,8 @@ PostgreSQL with Sequelize ORM (TypeScript). Follows `sd-cohesity` conventions: `
 Copy-paste the DBML below into [dbdiagram.io](https://dbdiagram.io/).
 
 > **Note:** `Organization` and `IntegrationAccount` live in `sd-core-platform`. We store only their UUIDs. Credentials, org details, and membership are fetched on-demand via internal API. Audit logs are also delegated to core-platform (`POST /internal/audit-logs`).
+>
+> **Plans, features, subscriptions, and entitlements are NOT stored in buybox.** A superuser configures them via the core-platform admin UI; buybox reads them at runtime through `GET /internal/organizations/{id}/entitlements` and `POST /internal/organizations/{id}/entitlements/consume`. See [`docs/entitlements.md`](./entitlements.md) for the feature contract and setup guide.
 
 ```dbml
 Project AmazonVisibilityTracker {

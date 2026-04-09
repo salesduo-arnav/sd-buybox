@@ -89,18 +89,113 @@ export const MOCK_ALERT = {
   created_at: "2026-04-07T09:45:00.000Z",
 };
 
+// Snapshot returned by GET /api/entitlements/me. Three flavours:
+//   HEALTHY  — pro-style plan with everything enabled, used by the
+//              default authenticated fixture so navigation tests still work.
+//   STARTER  — paid but restricted (no Slack, no advanced analytics) so we
+//              can exercise FeatureGate / clamp behaviour.
+//   LOCKED   — has_any_entitlement=false; ProtectedRoute renders <LockedShell>.
+export const MOCK_ENTITLEMENTS_HEALTHY = {
+  organization_id: MOCK_ACCOUNT.organization_id,
+  has_any_entitlement: true,
+  features: {
+    slack_alerts: true,
+    custom_thresholds: true,
+    custom_recipients: true,
+    selected_tracking: true,
+    advanced_analytics: true,
+  },
+  tiers: {
+    max_frequency: "real_time",
+    retention_days: 180,
+  },
+  limits: {
+    tracked_asins: { used: 12, limit: null, atCap: false },
+    connected_accounts: { used: 1, limit: null, atCap: false },
+  },
+};
+
+export const MOCK_ENTITLEMENTS_STARTER = {
+  organization_id: MOCK_ACCOUNT.organization_id,
+  has_any_entitlement: true,
+  features: {
+    slack_alerts: false,
+    custom_thresholds: true,
+    custom_recipients: false,
+    selected_tracking: true,
+    advanced_analytics: false,
+  },
+  tiers: {
+    max_frequency: "hourly",
+    retention_days: 90,
+  },
+  limits: {
+    tracked_asins: { used: 47, limit: 250, atCap: false },
+    connected_accounts: { used: 1, limit: 1, atCap: true },
+  },
+};
+
+export const MOCK_ENTITLEMENTS_LOCKED = {
+  organization_id: MOCK_ACCOUNT.organization_id,
+  has_any_entitlement: false,
+  features: {
+    slack_alerts: false,
+    custom_thresholds: false,
+    custom_recipients: false,
+    selected_tracking: false,
+    advanced_analytics: false,
+  },
+  tiers: {
+    max_frequency: "daily",
+    retention_days: 30,
+  },
+  limits: {
+    tracked_asins: { used: 0, limit: 0, atCap: true },
+    connected_accounts: { used: 0, limit: 0, atCap: true },
+  },
+};
+
 /**
  * Sets up API route mocking for an authenticated session.
- * Intercepts the auth, account, and buybox endpoints and returns mock data
- * matching the backend's `{ status: "success", data: ... }` envelope.
+ * Intercepts the auth, account, entitlement, and buybox endpoints and
+ * returns mock data matching the backend's `{ status: "success", data: ... }`
+ * envelope.
+ *
+ * Pass `entitlements` to override the snapshot returned by /entitlements/me.
+ * Defaults to HEALTHY so existing tests pass through ProtectedRoute without
+ * hitting the locked shell.
  */
-export async function mockAuthenticatedApi(page: Page) {
+export async function mockAuthenticatedApi(
+  page: Page,
+  options: { entitlements?: typeof MOCK_ENTITLEMENTS_HEALTHY } = {}
+) {
+  const entitlements = options.entitlements ?? MOCK_ENTITLEMENTS_HEALTHY;
+
   // Auth
   await page.route("**/api/auth/me", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ status: "success", data: MOCK_USER }),
+    })
+  );
+
+  // Entitlements snapshot — drives ProtectedRoute / LockedShell / FeatureGate.
+  await page.route("**/api/entitlements/me", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ status: "success", data: entitlements }),
+    })
+  );
+
+  // Cache invalidation endpoint — fire-and-forget from the frontend after
+  // the user returns from the billing flow. Always 200.
+  await page.route("**/api/entitlements/refresh", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ status: "success", data: { invalidated: true } }),
     })
   );
 
@@ -112,8 +207,10 @@ export async function mockAuthenticatedApi(page: Page) {
     })
   );
 
-  // Integration accounts (served by sd-buybox backend, sourced from sd-core-platform)
-  await page.route("**/api/settings/accounts", (route) => {
+  // Integration accounts (served by sd-buybox backend, sourced from
+  // sd-core-platform). The frontend service hits `/api/integrations/accounts`
+  // — see src/services/IntegrationsService.ts.
+  await page.route("**/api/integrations/accounts", (route) => {
     if (route.request().method() === "GET") {
       return route.fulfill({
         status: 200,

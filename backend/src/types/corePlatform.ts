@@ -1,16 +1,14 @@
 // Type definitions mirroring the shapes returned by sd-core-platform.
 //
-// These are the authoritative shapes for everything the buybox backend
-// consumes from core-platform over HTTP. They live in one file so every
-// middleware, controller, and service imports from a single source of truth.
-//
-// Reference endpoints (sd-core-platform):
-//   GET  /auth/me                                    -> CorePlatformUser
-//   POST /auth/logout                                -> void
-//   GET  /internal/integrations/accounts?org_id=...  -> IntegrationAccountSummary[]
-//   POST /internal/audit-logs                        -> void
-//   POST /internal/email/send                        -> void
-//   POST /internal/slack/send-to-channel             -> void
+// Reference endpoints:
+//   GET  /auth/me                                         -> CorePlatformUser
+//   POST /auth/logout                                     -> void
+//   GET  /internal/organizations/:id/entitlements         -> RawEntitlement[]
+//   POST /internal/organizations/:id/entitlements/consume -> ConsumeEntitlementResult
+//   GET  /internal/integrations/accounts?org_id=...       -> IntegrationAccountSummary[]
+//   POST /internal/audit-logs                             -> void
+//   POST /internal/email/send                             -> void
+//   POST /internal/slack/send-to-channel                  -> void
 
 export interface Organization {
     id: string;
@@ -58,6 +56,28 @@ export interface AuditLogEntry {
     entity_type?: string;
     entity_id?: string;
     details?: Record<string, unknown>;
+}
+
+// One row from GET /internal/organizations/:id/entitlements.
+// `limit_amount = null` means unlimited, `0` means disabled.
+export interface RawEntitlement {
+    id: string;
+    organization_id: string;
+    tool_id: string;
+    feature_id: string;
+    limit_amount: number | null;
+    usage_amount: number;
+    reset_period: 'monthly' | 'yearly' | 'never';
+    feature: { id: string; name: string; slug: string };
+    tool: { id: string; name: string; slug: string };
+}
+
+// Response body from POST /internal/organizations/:id/entitlements/consume.
+export interface ConsumeEntitlementResult {
+    allowed: boolean;
+    reason?: 'limit_exceeded' | 'no_entitlement';
+    usage_amount?: number;
+    limit_amount?: number | null;
 }
 
 export interface SessionValidationContext {

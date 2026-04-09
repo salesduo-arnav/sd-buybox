@@ -3,9 +3,11 @@ import Logger from '../utils/logger';
 import { env } from '../config/env';
 import {
     AuditLogEntry,
+    ConsumeEntitlementResult,
     CorePlatformError,
     CorePlatformUser,
     IntegrationAccountSummary,
+    RawEntitlement,
     SessionValidationContext,
 } from '../types/corePlatform';
 
@@ -173,12 +175,39 @@ const slack = {
     },
 };
 
+// Entitlements — service-to-service. Core-platform is the sole arbiter
+// of what each org is allowed to do.
+const entitlements = {
+    async list(organizationId: string): Promise<RawEntitlement[]> {
+        const response = await http().get<RawEntitlement[]>(
+            `/internal/organizations/${organizationId}/entitlements`,
+            { timeout: env.corePlatform.authTimeoutMs }
+        );
+        return unwrap<RawEntitlement[]>(response.data) ?? [];
+    },
+
+    // Atomic check-and-increment. The row lock lives on core-platform;
+    // never wrap this in a local lock.
+    async consume(
+        organizationId: string,
+        featureSlug: string,
+        amount = 1
+    ): Promise<ConsumeEntitlementResult> {
+        const response = await http().post<ConsumeEntitlementResult>(
+            `/internal/organizations/${organizationId}/entitlements/consume`,
+            { feature_slug: featureSlug, amount }
+        );
+        return unwrap<ConsumeEntitlementResult>(response.data);
+    },
+};
+
 export const corePlatform = {
     session,
     integrations,
     audit,
     email,
     slack,
+    entitlements,
 };
 
 export type CorePlatformClient = typeof corePlatform;

@@ -219,3 +219,74 @@ describe('integrations.accountBelongsToOrg', () => {
         await expect(corePlatform.integrations.accountBelongsToOrg('acc-1', 'org-1')).resolves.toBe(false);
     });
 });
+
+describe('entitlements.list', () => {
+    it('calls /internal/organizations/:id/entitlements and returns the unwrapped array', async () => {
+        const mockEntitlements = [
+            {
+                id: 'ent-1',
+                organization_id: 'org-1',
+                tool_id: 'tool-buybox',
+                feature_id: 'feat-1',
+                limit_amount: 25,
+                usage_amount: 0,
+                reset_period: 'never',
+                feature: { id: 'feat-1', name: 'Tracked ASINs', slug: 'buybox.limit.tracked_asins' },
+                tool: { id: 'tool-buybox', name: 'BuyBox', slug: 'buybox' },
+            },
+        ];
+        mockAxiosInstance.get.mockResolvedValueOnce({ data: mockEntitlements });
+
+        const result = await corePlatform.entitlements.list('org-1');
+
+        expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+            '/internal/organizations/org-1/entitlements',
+            expect.any(Object)
+        );
+        expect(result).toEqual(mockEntitlements);
+    });
+
+    it('unwraps a { data: [...] } envelope', async () => {
+        mockAxiosInstance.get.mockResolvedValueOnce({ data: { data: [{ id: 'ent-1' }] } });
+        const result = await corePlatform.entitlements.list('org-1');
+        expect(result).toEqual([{ id: 'ent-1' }]);
+    });
+
+    it('returns an empty array when the upstream payload is null', async () => {
+        mockAxiosInstance.get.mockResolvedValueOnce({ data: null });
+        const result = await corePlatform.entitlements.list('org-1');
+        expect(result).toEqual([]);
+    });
+});
+
+describe('entitlements.consume', () => {
+    it('POSTs feature_slug + amount to the consume endpoint', async () => {
+        mockAxiosInstance.post.mockResolvedValueOnce({
+            data: { allowed: true, usage_amount: 1, limit_amount: 5 },
+        });
+
+        const result = await corePlatform.entitlements.consume('org-1', 'buybox.limit.scans_per_month');
+
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+            '/internal/organizations/org-1/entitlements/consume',
+            { feature_slug: 'buybox.limit.scans_per_month', amount: 1 }
+        );
+        expect(result.allowed).toBe(true);
+        expect(result.usage_amount).toBe(1);
+    });
+
+    it('honors a custom amount and unwraps a { data: ... } envelope', async () => {
+        mockAxiosInstance.post.mockResolvedValueOnce({
+            data: { data: { allowed: false, reason: 'limit_exceeded', usage_amount: 5, limit_amount: 5 } },
+        });
+
+        const result = await corePlatform.entitlements.consume('org-1', 'buybox.limit.scans_per_month', 3);
+
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+            '/internal/organizations/org-1/entitlements/consume',
+            { feature_slug: 'buybox.limit.scans_per_month', amount: 3 }
+        );
+        expect(result.allowed).toBe(false);
+        expect(result.reason).toBe('limit_exceeded');
+    });
+});
