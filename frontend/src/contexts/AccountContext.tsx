@@ -1,35 +1,20 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { IntegrationAccount } from "@/types/Account";
 import { IntegrationsService } from "@/services/IntegrationsService";
 import { LS } from "@/lib/localStorageKeys";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "./auth";
+import { AccountContext } from "./account";
 
-/**
- * AccountContext
- *
- * Tracks the user's connected integration accounts (as known by sd-core-platform)
- * and the "active" account for scoping buybox feature pages. Derived from
- * AuthContext — we refetch whenever the active org changes.
- */
-
-interface AccountContextType {
-  accounts: IntegrationAccount[];
-  activeAccount: IntegrationAccount | null;
-  isLoading: boolean;
-  switchAccount: (accountId: string) => void;
-  refreshAccounts: () => Promise<void>;
-}
-
-const AccountContext = createContext<AccountContextType>({
-  accounts: [],
-  activeAccount: null,
-  isLoading: true,
-  switchAccount: () => {},
-  refreshAccounts: async () => {},
-});
+// AccountContext
+//
+// Tracks the user's connected integration accounts (as known by sd-core-platform)
+// and the "active" account for scoping buybox feature pages. Derived from
+// AuthContext — we refetch whenever the active org changes.
 
 export function AccountProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, activeOrganization } = useAuth();
+  const activeOrganizationId = activeOrganization?.id;
+
   const [accounts, setAccounts] = useState<IntegrationAccount[]>([]);
   const [activeAccount, setActiveAccount] = useState<IntegrationAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,11 +24,11 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       const { data } = await IntegrationsService.listAccounts();
       setAccounts(data);
 
-      const savedId = localStorage.getItem(LS.accountId);
-      const match = data.find((a) => a.id === savedId);
+      const savedAccountId = localStorage.getItem(LS.accountId);
+      const matchedAccount = data.find((account) => account.id === savedAccountId);
 
-      if (match) {
-        setActiveAccount(match);
+      if (matchedAccount) {
+        setActiveAccount(matchedAccount);
       } else if (data.length > 0) {
         setActiveAccount(data[0]);
         localStorage.setItem(LS.accountId, data[0].id);
@@ -61,24 +46,26 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
 
   const switchAccount = useCallback(
     (accountId: string) => {
-      const account = accounts.find((a) => a.id === accountId);
-      if (!account) return;
-      setActiveAccount(account);
+      const matchedAccount = accounts.find((account) => account.id === accountId);
+      if (!matchedAccount) return;
+      setActiveAccount(matchedAccount);
       localStorage.setItem(LS.accountId, accountId);
     },
     [accounts]
   );
 
-  // Refetch when authentication or active organization changes.
+  // Refetch when authentication or active organization changes. We depend on
+  // `activeOrganizationId` (a primitive) rather than the whole object so the
+  // effect only fires when the id actually changes.
   useEffect(() => {
-    if (isAuthenticated && activeOrganization) {
+    if (isAuthenticated && activeOrganizationId) {
       refreshAccounts();
     } else {
       setAccounts([]);
       setActiveAccount(null);
       setIsLoading(false);
     }
-  }, [isAuthenticated, activeOrganization?.id, refreshAccounts]);
+  }, [isAuthenticated, activeOrganizationId, refreshAccounts]);
 
   return (
     <AccountContext.Provider
@@ -87,8 +74,4 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AccountContext.Provider>
   );
-}
-
-export function useAccount() {
-  return useContext(AccountContext);
 }

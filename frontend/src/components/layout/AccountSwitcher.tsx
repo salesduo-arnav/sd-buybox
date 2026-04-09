@@ -1,5 +1,5 @@
 import { ChevronsUpDown, Check } from "lucide-react";
-import { useAccount } from "@/contexts/AccountContext";
+import { useAccount } from "@/contexts/account";
 import { IntegrationAccount } from "@/types/Account";
 import {
   DropdownMenu,
