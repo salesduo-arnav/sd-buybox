@@ -1,26 +1,30 @@
 import { Client } from 'pg';
+import { env } from '../config/env';
 
-export default async function globalSetup() {
+// Jest global setup: ensure a test database exists before any tests run.
+// Connects to the default `postgres` database (which always exists), then
+// creates the buybox test database if it's missing.
+
+const TEST_DB_FALLBACK = 'buybox_test';
+const ADMIN_DATABASE = 'postgres';
+
+export default async function globalSetup(): Promise<void> {
     const client = new Client({
-        host: process.env.PGHOST || 'localhost',
-        port: Number(process.env.PGPORT) || 5434,
-        user: process.env.PGUSER || 'postgres',
-        password: process.env.PGPASSWORD || 'postgres',
-        database: 'postgres',
+        host: env.db.host,
+        port: env.db.port,
+        user: env.db.user || 'postgres',
+        password: env.db.password || 'postgres',
+        database: ADMIN_DATABASE,
     });
 
     try {
         await client.connect();
-        const dbName = process.env.PGDATABASE || 'buybox_test';
+        const targetDatabase = env.db.database || TEST_DB_FALLBACK;
 
-        // Create test database if it doesn't exist
-        const result = await client.query(
-            `SELECT 1 FROM pg_database WHERE datname = $1`,
-            [dbName]
-        );
-        if (result.rowCount === 0) {
-            await client.query(`CREATE DATABASE "${dbName}"`);
-            console.log(`Test database "${dbName}" created`);
+        const existing = await client.query(`SELECT 1 FROM pg_database WHERE datname = $1`, [targetDatabase]);
+        if (existing.rowCount === 0) {
+            await client.query(`CREATE DATABASE "${targetDatabase}"`);
+            console.log(`Test database "${targetDatabase}" created`);
         }
     } finally {
         await client.end();

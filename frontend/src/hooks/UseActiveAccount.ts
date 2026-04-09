@@ -1,4 +1,4 @@
-import { useAccount } from "@/contexts/AccountContext";
+import { useAccount } from "@/contexts/account";
 
 export function useActiveAccount() {
   const { activeAccount } = useAccount();

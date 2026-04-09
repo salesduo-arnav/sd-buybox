@@ -1,14 +1,13 @@
 import Logger from '../utils/logger';
 
-/**
- * Scheduler Service
- *
- * Manages the pg-boss schedule tick:
- * - Registers recurring SCHEDULE_TICK job
- * - Queries tracker_configs for due accounts
- * - Enqueues ACCOUNT_SCAN jobs
- * - Calculates next_scheduled_run_at
- */
+// Scheduler Service
+//
+// Manages the pg-boss schedule tick:
+//   - Registers recurring SCHEDULE_TICK job
+//   - Queries tracker_configs for due accounts
+//   - Enqueues ACCOUNT_SCAN jobs
+//   - Calculates next_scheduled_run_at
+
 class SchedulerService {
     async registerJobHandlers(): Promise<void> {
         Logger.info('Scheduler job handlers registered (stubs)');

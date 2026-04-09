@@ -1,15 +1,13 @@
 import { SystemConfig } from '../models';
 import Logger from '../utils/logger';
 
-/**
- * Config Service
- *
- * Read/write system_configs table for admin-managed settings.
- */
+// Config Service
+//
+// Read/write the system_configs table for admin-managed settings.
+
 class ConfigService {
-    /**
-     * Get a config value by key, with optional default
-     */
+    // Get a config value by key. Throws if the key is missing and no
+    // default was provided.
     async get<T = unknown>(key: string, defaultValue?: T): Promise<T> {
         const config = await SystemConfig.findOne({ where: { config_key: key } });
         if (!config) {
@@ -19,16 +17,12 @@ class ConfigService {
         return config.config_value as T;
     }
 
-    /**
-     * Get all configs
-     */
+    // List all configs, sorted by key for stable ordering.
     async getAll(): Promise<SystemConfig[]> {
         return SystemConfig.findAll({ order: [['config_key', 'ASC']] });
     }
 
-    /**
-     * Update a config value
-     */
+    // Upsert a config value.
     async set(key: string, value: unknown): Promise<SystemConfig> {
         const [config] = await SystemConfig.upsert({
             config_key: key,

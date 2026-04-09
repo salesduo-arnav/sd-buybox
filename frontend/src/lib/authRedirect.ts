@@ -17,7 +17,6 @@ function corePlatformUrl(): string {
     if (!configured) {
         // Should never happen in a properly-built frontend — Vite inlines
         // env vars at build time. If we get here, something is misconfigured.
-        // eslint-disable-next-line no-console
         console.error('VITE_CORE_PLATFORM_URL is not set — auth redirects will fail.');
         return '';
     }

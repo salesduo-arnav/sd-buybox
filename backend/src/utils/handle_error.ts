@@ -1,8 +1,50 @@
 import { Response } from 'express';
 import Logger from './logger';
+import { CorePlatformError } from '../types/corePlatform';
 
-export function handleError(res: Response, error: unknown, context: string): void {
+// Shared API response envelope helpers.
+//
+//   success: { status: 'success', data: T }
+//   error:   { status: 'error',   error: { code, message } }
+//
+// Every response from buybox uses one of these two shapes so the frontend
+// has exactly one place to parse.
+
+export function apiSuccess<T>(res: Response, data: T, statusCode = 200): Response {
+    return res.status(statusCode).json({ status: 'success', data });
+}
+
+export function apiError(res: Response, statusCode: number, code: string, message: string): Response {
+    return res.status(statusCode).json({ status: 'error', error: { code, message } });
+}
+
+// Final catch-all for controller try/catch blocks.
+// Classifies CorePlatformError into a sensible HTTP status so the frontend
+// can react intelligently (session expired -> login redirect, upstream down
+// -> retry later).
+export function handleError(res: Response, error: unknown, context: string): Response {
+    if (error instanceof CorePlatformError) {
+        if (error.isUnauthorized) {
+            Logger.warn(`${context}: core-platform rejected session`, { code: error.code });
+            return apiError(res, 401, 'UNAUTHENTICATED', 'Session expired');
+        }
+        if (error.isUpstreamUnavailable) {
+            Logger.error(`${context}: core-platform upstream unavailable`, {
+                code: error.code,
+                status: error.status,
+                message: error.message,
+            });
+            return apiError(res, 503, 'UPSTREAM_UNAVAILABLE', 'Upstream service temporarily unavailable');
+        }
+        Logger.error(`${context}: core-platform error`, {
+            code: error.code,
+            status: error.status,
+            message: error.message,
+        });
+        return apiError(res, error.status ?? 500, error.code, error.message);
+    }
+
     const message = error instanceof Error ? error.message : 'Unknown error';
     Logger.error(`${context}: ${message}`, { stack: error instanceof Error ? error.stack : undefined });
-    res.status(500).json({ status: 'error', message: 'Internal server error' });
+    return apiError(res, 500, 'INTERNAL_ERROR', 'Internal server error');
 }

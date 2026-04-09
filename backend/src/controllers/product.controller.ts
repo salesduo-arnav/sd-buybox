@@ -1,25 +1,25 @@
 import { Request, Response } from 'express';
 import { Product } from '../models';
 import { parsePagination, paginateQuery, buildPaginatedResult } from '../utils/pagination';
-import { handleError } from '../utils/handle_error';
+import { handleError, apiSuccess, apiError } from '../utils/handle_error';
+import { getOrganizationId } from '../utils/request_auth';
 
-/**
- * Product Controller
- *
- * GET  /api/products          — List products with visibility data
- * GET  /api/products/:id      — Product detail + snapshot history
- */
+// Product Controller
+//
+// GET /api/products      — List products with visibility data
+// GET /api/products/:id  — Product detail + snapshot history
+
 export const listProducts = async (req: Request, res: Response) => {
     try {
-        const organizationId = req.auth!.organization!.id;
+        const organizationId = getOrganizationId(req);
         const pagination = parsePagination(req.query);
-        const { account_id } = req.query;
+        const { account_id: accountIdFilter } = req.query;
 
-        const where: Record<string, unknown> = { organization_id: organizationId };
-        if (account_id) where.integration_account_id = account_id;
+        const whereClause: Record<string, unknown> = { organization_id: organizationId };
+        if (accountIdFilter) whereClause.integration_account_id = accountIdFilter;
 
         const { count, rows } = await Product.findAndCountAll({
-            where,
+            where: whereClause,
             ...paginateQuery(pagination),
         });
 
@@ -31,16 +31,19 @@ export const listProducts = async (req: Request, res: Response) => {
 
 export const getProduct = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
-        const product = await Product.findByPk(id);
+        const { id: productId } = req.params;
+        const organizationId = getOrganizationId(req);
+
+        const product = await Product.findOne({
+            where: { id: productId, organization_id: organizationId },
+        });
 
         if (!product) {
-            return res.status(404).json({ status: 'error', message: 'Product not found' });
+            return apiError(res, 404, 'NOT_FOUND', 'Product not found');
         }
 
         // TODO: Include snapshot history, alerts, visibility data
-
-        res.json({ status: 'success', data: product });
+        return apiSuccess(res, product);
     } catch (error) {
         handleError(res, error, 'getProduct');
     }

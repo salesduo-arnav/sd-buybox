@@ -4,8 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { AccountProvider } from "@/contexts/AccountContext";
+import { useAuth } from "@/contexts/auth";
 import { redirectToLogin } from "@/lib/authRedirect";
 import Layout from "@/components/layout/Layout";
 import Landing from "@/pages/Landing";
@@ -48,11 +49,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-/**
- * Placeholder page used by all four foundation routes. Real Buy Box
- * feature pages (Overview KPIs, Products table, Alerts feed, Settings
- * form) will replace these as they are built.
- */
+// Placeholder page used by all four foundation routes. Real Buy Box
+// feature pages (Overview KPIs, Products table, Alerts feed, Settings
+// form) will replace these as they are built.
 function PlaceholderPage({ titleKey, descriptionKey }: { titleKey: string; descriptionKey: string }) {
   const { t } = useTranslation();
   return (

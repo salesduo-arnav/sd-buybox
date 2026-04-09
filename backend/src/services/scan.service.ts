@@ -1,13 +1,12 @@
 import Logger from '../utils/logger';
 
-/**
- * Scan Service
- *
- * Orchestrates Buy Box scans:
- * - Registers pg-boss job handlers for ACCOUNT_SCAN and PRODUCT_CHECK
- * - Handles manual scan triggers
- * - Tracks scan progress
- */
+// Scan Service
+//
+// Orchestrates Buy Box scans:
+//   - Registers pg-boss job handlers for ACCOUNT_SCAN and PRODUCT_CHECK
+//   - Handles manual scan triggers
+//   - Tracks scan progress
+
 class ScanService {
     async registerJobHandlers(): Promise<void> {
         Logger.info('Scan job handlers registered (stubs)');

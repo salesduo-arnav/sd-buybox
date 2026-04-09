@@ -9,17 +9,16 @@ import settingsRoutes from './settings.routes';
 import adminRoutes from './admin.routes';
 import integrationsRoutes from './integrations.routes';
 
-/**
- * Root API router.
- *
- * Auth chain is mounted once, per-group, at this level. Individual feature
- * routers do NOT call `router.use(authenticate)` — they trust the chain
- * established here:
- *
- *   /auth           -> authenticate only (/me), or public (/logout)
- *   /<feature>      -> authenticate + resolveOrganization
- *   /admin          -> authenticate + resolveOrganization + requireSuperuser
- */
+// Root API router.
+//
+// The auth chain is mounted once, per-group, at this level. Individual
+// feature routers do NOT call `router.use(authenticate)` — they trust the
+// chain established here:
+//
+//   /auth      -> authenticate only (/me), or public (/logout)
+//   /<feature> -> authenticate + resolveOrganization
+//   /admin     -> authenticate + resolveOrganization + requireSuperuser
+
 const router = Router();
 
 router.use('/auth', authRoutes);

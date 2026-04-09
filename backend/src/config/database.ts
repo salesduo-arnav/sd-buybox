@@ -1,21 +1,18 @@
 import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv';
-import path from 'path';
+import { env } from './env';
 import Logger from '../utils/logger';
 
-dotenv.config({ path: path.join(__dirname, '../../../.env') });
-
-const isProduction = process.env.NODE_ENV === 'production';
-
+// Single shared Sequelize instance. Models import from here so they all
+// bind to the same connection pool.
 const sequelize = new Sequelize({
     dialect: 'postgres',
-    host: process.env.PGHOST || 'localhost',
-    port: Number(process.env.PGPORT) || 5434,
-    username: process.env.PGUSER,
-    password: process.env.PGPASSWORD,
-    database: process.env.PGDATABASE,
+    host: env.db.host,
+    port: env.db.port,
+    username: env.db.user,
+    password: env.db.password,
+    database: env.db.database,
     logging: false,
-    ...(isProduction && {
+    ...(env.isProduction && {
         dialectOptions: {
             ssl: {
                 require: true,
@@ -25,7 +22,7 @@ const sequelize = new Sequelize({
     }),
 });
 
-export const connectDB = async () => {
+export const connectDB = async (): Promise<void> => {
     try {
         await sequelize.authenticate();
         Logger.info('Database connected successfully');
@@ -35,7 +32,7 @@ export const connectDB = async () => {
     }
 };
 
-export const closeDB = async () => {
+export const closeDB = async (): Promise<void> => {
     await sequelize.close();
 };
 
