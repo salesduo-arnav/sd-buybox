@@ -121,13 +121,14 @@ export const entitlements = {
     },
 
     // Derived limits — caller passes the live row count.
+    // Missing row -> hard zero. `null` row -> unlimited.
     checkLimit(
         snapshot: Snapshot,
         slug: (typeof LIMIT)[keyof typeof LIMIT],
         currentUsed: number
     ): { used: number; limit: number | null; atCap: boolean } {
         const entry = snapshot.entries.get(slug);
-        const limit = entry?.limit ?? 0;
+        const limit = entry ? entry.limit : 0;
         const atCap = limit !== null && currentUsed >= limit;
         return { used: currentUsed, limit, atCap };
     },
