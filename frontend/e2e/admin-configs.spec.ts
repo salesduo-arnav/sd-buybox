@@ -19,7 +19,11 @@ const MOCK_CONFIGS = [
 
 /** Mock all APIs with a superuser session + admin configs endpoint. */
 async function mockSuperuserApi(page: import("@playwright/test").Page) {
-  // Override auth to return a superuser.
+  // Set up base mock APIs first (entitlements, accounts, etc.).
+  await mockAuthenticatedApi(page);
+
+  // Override auth with superuser AFTER mockAuthenticatedApi — Playwright
+  // uses LIFO ordering, so the last-registered route for a URL wins.
   await page.route("**/api/auth/me", (route) =>
     route.fulfill({
       status: 200,
@@ -51,9 +55,6 @@ async function mockSuperuserApi(page: import("@playwright/test").Page) {
     }
     return route.continue();
   });
-
-  // Set up remaining mock APIs (entitlements, accounts, etc.).
-  await mockAuthenticatedApi(page);
 }
 
 base.describe("Admin Configs page", () => {
