@@ -98,6 +98,20 @@ jobs:
           name: frontend-lint-report
           path: frontend_lint_report.md
 
+      - name: Upload E2E Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-e2e-report
+          path: frontend_e2e_report.md
+
+      - name: Upload Playwright HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+
   tests:
     name: Backend Tests
     needs: detect-changes
@@ -210,6 +224,11 @@ jobs:
           echo "## Frontend Lint Results" >> report.md
           echo "\`\`\`" >> report.md
           cat frontend-lint-report/frontend_lint_report.md >> report.md || echo "Lint skipped or not found." >> report.md
+          echo "\`\`\`" >> report.md
+
+          echo "## Frontend E2E Test Results" >> report.md
+          echo "\`\`\`" >> report.md
+          cat frontend-e2e-report/frontend_e2e_report.md >> report.md || echo "E2E tests skipped or not found." >> report.md
           echo "\`\`\`" >> report.md
 
           cml comment create report.md
