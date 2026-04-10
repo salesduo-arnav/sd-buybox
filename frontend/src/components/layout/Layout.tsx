@@ -11,7 +11,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="h-svh overflow-hidden">
         <Header />
         <main className="flex-1 overflow-auto p-6 md:p-8">
           <div className="mx-auto max-w-6xl">{children}</div>

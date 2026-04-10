@@ -3,6 +3,7 @@ import app from './app';
 import { env } from './config/env';
 import { connectDB, closeDB } from './config/database';
 import Logger from './utils/logger';
+import configService from './services/config.service';
 import { initJobQueue, stopJobQueue } from './services/job_queue.service';
 import scanService from './services/scan.service';
 import schedulerService from './services/scheduler.service';
@@ -52,6 +53,7 @@ const startServer = async (): Promise<void> => {
         Logger.info('Initializing services...');
 
         await connectDB();
+        await configService.initialize();
         await initJobQueue();
         await scanService.registerJobHandlers();
         await schedulerService.registerJobHandlers();

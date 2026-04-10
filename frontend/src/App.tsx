@@ -14,6 +14,8 @@ import { redirectToLogin } from "@/lib/authRedirect";
 import Layout from "@/components/layout/Layout";
 import Landing from "@/pages/Landing";
 import IntegrationGuard from "@/components/IntegrationGuard";
+import AdminRoute from "@/components/AdminRoute";
+import AdminConfigs from "@/pages/admin/AdminConfigs";
 import { LockedShell } from "@/components/entitlements";
 
 const queryClient = new QueryClient({
@@ -125,6 +127,12 @@ function AppRoutes() {
                 />
               }
             />
+          </Route>
+        </Route>
+        {/* Admin routes — outside IntegrationGuard (admins don't need an integration) */}
+        <Route element={<AdminRoute />}>
+          <Route element={<Layout><Outlet /></Layout>}>
+            <Route path="/admin/configs" element={<AdminConfigs />} />
           </Route>
         </Route>
       </Route>

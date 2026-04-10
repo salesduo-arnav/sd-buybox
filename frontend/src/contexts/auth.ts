@@ -8,6 +8,7 @@ import type { AuthUser, Organization } from "@/types/Auth";
 export interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   isLoading: boolean;
   activeOrganization: Organization | null;
   organizations: Organization[];
@@ -19,6 +20,7 @@ export interface AuthContextType {
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
+  isAdmin: false,
   isLoading: true,
   activeOrganization: null,
   organizations: [],
