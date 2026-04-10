@@ -8,7 +8,6 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
-import { LanguageSwitcher } from "./LanguageSwitcher";
 
 const routeNames: Record<string, string> = {
   overview: "nav.overview",
@@ -38,9 +37,7 @@ export function Header() {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="ml-auto">
-        <LanguageSwitcher />
-      </div>
+      <div className="ml-auto" />
     </header>
   );
 }

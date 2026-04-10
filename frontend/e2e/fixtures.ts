@@ -16,6 +16,10 @@ export const MOCK_USER = {
       organization: { id: "5270a594-0078-4abb-a6b6-e1f79416aa13", name: "SalesDuo" },
       role: { id: 1, name: "Owner" },
     },
+    {
+      organization: { id: "c4d5e6f7-8901-2345-abcd-ef6789012345", name: "Acme Corp" },
+      role: { id: 2, name: "Member" },
+    },
   ],
 };
 

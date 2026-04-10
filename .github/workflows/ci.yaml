@@ -83,20 +83,54 @@ jobs:
         working-directory: ./frontend
         run: npm run build
 
-      - name: Install Playwright
-        working-directory: ./frontend
-        run: npx playwright install --with-deps chromium
-
-      - name: Run E2E Tests
-        working-directory: ./frontend
-        run: npx playwright test --reporter=list 2>&1 | tee ../frontend_e2e_report.md
-
       - name: Upload Lint Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-lint-report
           path: frontend_lint_report.md
+
+  test-frontend:
+    name: Frontend E2E Tests
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Create frontend .env
+        run: echo "${{ secrets.FRONTEND_ENV_FILE }}" > frontend/.env
+      - name: Install Dependencies
+        working-directory: ./frontend
+        run: |
+          rm -f package-lock.json
+          npm install --no-audit --no-fund
+      - name: Install Playwright
+        working-directory: ./frontend
+        run: npx playwright install --with-deps chromium
+      - name: Run E2E Tests
+        working-directory: ./frontend
+        run: |
+          set -o pipefail
+          npx playwright test --reporter=list 2>&1 | tee ../frontend_e2e_report.md
+
+      - name: Upload E2E Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-e2e-report
+          path: frontend_e2e_report.md
+
+      - name: Upload Playwright HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
 
   tests:
     name: Backend Tests
@@ -177,7 +211,7 @@ jobs:
 
   report:
     name: Generate CML Report
-    needs: [detect-changes, lint-backend, lint-frontend, tests]
+    needs: [detect-changes, lint-backend, lint-frontend, test-frontend, tests]
     if: always()
     runs-on: ubuntu-latest
     permissions:
@@ -210,6 +244,11 @@ jobs:
           echo "## Frontend Lint Results" >> report.md
           echo "\`\`\`" >> report.md
           cat frontend-lint-report/frontend_lint_report.md >> report.md || echo "Lint skipped or not found." >> report.md
+          echo "\`\`\`" >> report.md
+
+          echo "## Frontend E2E Test Results" >> report.md
+          echo "\`\`\`" >> report.md
+          cat frontend-e2e-report/frontend_e2e_report.md >> report.md || echo "E2E tests skipped or not found." >> report.md
           echo "\`\`\`" >> report.md
 
           cml comment create report.md
