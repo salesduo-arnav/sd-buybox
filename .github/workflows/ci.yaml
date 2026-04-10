@@ -102,6 +102,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Create frontend .env
+        run: echo "${{ secrets.FRONTEND_ENV_FILE }}" > frontend/.env
       - name: Install Dependencies
         working-directory: ./frontend
         run: |
