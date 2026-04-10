@@ -10,4 +10,5 @@
 export const LS = {
     orgId: 'buybox:activeOrganizationId',
     accountId: 'buybox:activeIntegrationAccountId',
+    integrationEnabled: 'buybox:integrationEnabled',
 } as const;

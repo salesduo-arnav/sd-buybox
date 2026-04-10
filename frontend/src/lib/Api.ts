@@ -62,6 +62,11 @@ api.interceptors.response.use(
     return response;
   },
   (error: AxiosError) => {
+    // Aborted requests (e.g. AbortController) are intentional — never toast.
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
+
     const status = error.response?.status;
     const url = error.config?.url;
 
@@ -76,6 +81,7 @@ api.interceptors.response.use(
     if (status && status >= 500) {
       toast.error(serverMessage || "Server error. Please try again later.");
     } else if (!error.response) {
+      console.error("Network error:", error);
       toast.error("Network error. Please check your connection.");
     }
 

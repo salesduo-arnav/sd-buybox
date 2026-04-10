@@ -10,6 +10,7 @@ import settingsRoutes from './settings.routes';
 import adminRoutes from './admin.routes';
 import integrationsRoutes from './integrations.routes';
 import entitlementsRoutes from './entitlements.routes';
+import toolsRoutes from './tools.routes';
 
 // Root API router.
 //
@@ -36,6 +37,10 @@ const orgChain = [...unlockedOrgChain, requireAnyEntitlement];
 // Must stay reachable while expired — the frontend locked shell needs them.
 router.use('/entitlements', ...unlockedOrgChain, entitlementsRoutes);
 router.use('/integrations', ...unlockedOrgChain, integrationsRoutes);
+
+// Tool metadata — only needs auth, no org resolution. Used by IntegrationGuard
+// to discover required integrations before the org context is fully validated.
+router.use('/tools', authenticate, toolsRoutes);
 
 // Gated feature routes — return 402 SUBSCRIPTION_REQUIRED when expired.
 router.use('/visibility', ...orgChain, visibilityRoutes);

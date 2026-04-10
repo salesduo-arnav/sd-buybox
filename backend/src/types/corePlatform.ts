@@ -80,6 +80,13 @@ export interface ConsumeEntitlementResult {
     limit_amount?: number | null;
 }
 
+export interface ToolInfo {
+    id: string;
+    name: string;
+    slug: string;
+    required_integrations: string[];
+}
+
 export interface SessionValidationContext {
     userAgent?: string;
     ip?: string;
