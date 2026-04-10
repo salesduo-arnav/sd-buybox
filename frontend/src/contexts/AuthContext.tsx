@@ -93,6 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         isAuthenticated: !!user,
+        isAdmin: user?.is_superuser ?? false,
         isLoading,
         activeOrganization,
         organizations,

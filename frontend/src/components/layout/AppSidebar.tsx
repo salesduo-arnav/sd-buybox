@@ -3,6 +3,7 @@ import {
   Package,
   Bell,
   Settings,
+  Shield,
   LogOut,
   User,
   ChevronsUpDown,
@@ -29,6 +30,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -55,6 +57,7 @@ export function AppSidebar() {
   const { t, i18n } = useTranslation();
   const {
     user,
+    isAdmin,
     logout,
     activeOrganization,
     organizations,
@@ -295,6 +298,33 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isAdmin && (
+          <>
+            <SidebarSeparator className="mx-2 my-2 bg-border/50" />
+            <SidebarGroup>
+              <SidebarGroupLabel className="px-3 text-xs font-semibold text-muted-foreground/70 uppercase tracking-widest mb-1">
+                {t("nav.administration", "Administration")}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location.pathname.startsWith("/admin")}
+                      onClick={() => navigate("/admin/configs")}
+                      tooltip={t("nav.systemConfigs", "System Configs")}
+                      className="gap-3 px-3 py-2 transition-all"
+                      data-testid="nav-admin-configs"
+                    >
+                      <Shield className="h-4 w-4 opacity-70" />
+                      <span>{t("nav.systemConfigs", "System Configs")}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-border/50 p-4 bg-sidebar-footer">

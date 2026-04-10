@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Scan } from '../models';
 import { corePlatform } from '../services/corePlatform.client';
+import configService from '../services/config.service';
 import { handleError, apiSuccess, apiError } from '../utils/handle_error';
 import { getOrganizationId } from '../utils/request_auth';
 import { SCAN_TRIGGERS, SCAN_STATUSES } from '../config/constants';
@@ -12,13 +13,11 @@ import { entitlements, EntitlementError, LIMIT } from '../services/entitlements'
 // GET  /api/scans          — List scans for an account
 // GET  /api/scans/:id      — Get scan details
 
-const DEFAULT_MARKETPLACE = 'US';
-const RECENT_SCANS_LIMIT = 20;
-
 export const triggerScan = async (req: Request, res: Response) => {
     try {
         const organizationId = getOrganizationId(req);
-        const { account_id: accountId, marketplace = DEFAULT_MARKETPLACE } = (req.body ?? {}) as {
+        const defaultMarketplace = configService.getSync('default_marketplace', 'US');
+        const { account_id: accountId, marketplace = defaultMarketplace } = (req.body ?? {}) as {
             account_id?: unknown;
             marketplace?: unknown;
         };
@@ -81,7 +80,7 @@ export const listScans = async (req: Request, res: Response) => {
         const scans = await Scan.findAll({
             where: whereClause,
             order: [['created_at', 'DESC']],
-            limit: RECENT_SCANS_LIMIT,
+            limit: configService.getSync('recent_scans_limit', 20),
         });
 
         return apiSuccess(res, scans);

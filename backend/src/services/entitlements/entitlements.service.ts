@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { corePlatform } from '../corePlatform.client';
+import configService from '../config.service';
 import { RawEntitlement } from '../../types/corePlatform';
 import { apiError } from '../../utils/handle_error';
 import { env } from '../../config/env';
@@ -100,10 +101,11 @@ export const entitlements = {
     // missing, rank 0, or the org has no entitlements at all.
     maxFrequency(snapshot: Snapshot): Frequency {
         const entry = snapshot.entries.get('buybox.tier.update_frequency');
-        if (!entry) return 'daily';
+        const fallback = configService.getSync<Frequency>('entitlement_frequency_fallback', 'daily');
+        if (!entry) return fallback;
         if (entry.limit === null || entry.limit >= 3) return 'real_time';
         if (entry.limit === 2) return 'hourly';
-        return 'daily';
+        return fallback;
     },
 
     clampFrequency(preferred: Frequency, snapshot: Snapshot): Frequency {
@@ -115,8 +117,8 @@ export const entitlements = {
     // ceiling so DELETE queries stay bounded.
     retentionDays(snapshot: Snapshot): number {
         const entry = snapshot.entries.get('buybox.tier.history_retention_days');
-        if (!entry) return 30;
-        if (entry.limit === null) return 3650;
+        if (!entry) return configService.getSync('entitlement_retention_default_days', 30);
+        if (entry.limit === null) return configService.getSync('entitlement_retention_unlimited_ceiling_days', 3650);
         return entry.limit;
     },
 
