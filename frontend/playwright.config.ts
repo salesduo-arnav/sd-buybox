@@ -15,5 +15,8 @@ export default defineConfig({
     command: "npm run dev",
     url: "http://localhost:5004",
     reuseExistingServer: true,
+    env: {
+      VITE_CORE_PLATFORM_URL: process.env.VITE_CORE_PLATFORM_URL || "http://app.lvh.me",
+    },
   },
 });

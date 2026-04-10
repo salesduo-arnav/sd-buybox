@@ -83,20 +83,38 @@ jobs:
         working-directory: ./frontend
         run: npm run build
 
-      - name: Install Playwright
-        working-directory: ./frontend
-        run: npx playwright install --with-deps chromium
-
-      - name: Run E2E Tests
-        working-directory: ./frontend
-        run: npx playwright test --reporter=list 2>&1 | tee ../frontend_e2e_report.md
-
       - name: Upload Lint Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-lint-report
           path: frontend_lint_report.md
+
+  test-frontend:
+    name: Frontend E2E Tests
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Dependencies
+        working-directory: ./frontend
+        run: |
+          rm -f package-lock.json
+          npm install --no-audit --no-fund
+      - name: Install Playwright
+        working-directory: ./frontend
+        run: npx playwright install --with-deps chromium
+      - name: Run E2E Tests
+        working-directory: ./frontend
+        run: |
+          set -o pipefail
+          npx playwright test --reporter=list 2>&1 | tee ../frontend_e2e_report.md
 
       - name: Upload E2E Report
         if: always()
@@ -191,7 +209,7 @@ jobs:
 
   report:
     name: Generate CML Report
-    needs: [detect-changes, lint-backend, lint-frontend, tests]
+    needs: [detect-changes, lint-backend, lint-frontend, test-frontend, tests]
     if: always()
     runs-on: ubuntu-latest
     permissions:
