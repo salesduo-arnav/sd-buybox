@@ -9,6 +9,7 @@ import {
     IntegrationAccountSummary,
     RawEntitlement,
     SessionValidationContext,
+    ToolInfo,
 } from '../types/corePlatform';
 
 // Core-platform HTTP client.
@@ -201,9 +202,26 @@ const entitlements = {
     },
 };
 
+// Tool metadata — session-based (forwarded as the user, not service-to-service).
+const tools = {
+    async getBySlug(slug: string, sessionId: string, context: SessionValidationContext = {}): Promise<ToolInfo> {
+        const cookieHeader = `${env.session.cookieName}=${sessionId}`;
+        const forwardedHeaders: Record<string, string> = { Cookie: cookieHeader };
+        if (context.userAgent) forwardedHeaders['User-Agent'] = context.userAgent;
+        if (context.ip) forwardedHeaders['X-Forwarded-For'] = context.ip;
+
+        const response = await http().get<ToolInfo>(`/tools/by-slug/${encodeURIComponent(slug)}`, {
+            timeout: env.corePlatform.authTimeoutMs,
+            headers: forwardedHeaders,
+        });
+        return unwrap<ToolInfo>(response.data);
+    },
+};
+
 export const corePlatform = {
     session,
     integrations,
+    tools,
     audit,
     email,
     slack,

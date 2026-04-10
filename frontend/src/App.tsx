@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Toaster as Sonner } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AccountProvider } from "@/contexts/AccountContext";
@@ -13,6 +13,7 @@ import { useIsLocked } from "@/hooks/useEntitlements";
 import { redirectToLogin } from "@/lib/authRedirect";
 import Layout from "@/components/layout/Layout";
 import Landing from "@/pages/Landing";
+import IntegrationGuard from "@/components/IntegrationGuard";
 import { LockedShell } from "@/components/entitlements";
 
 const queryClient = new QueryClient({
@@ -24,7 +25,7 @@ const queryClient = new QueryClient({
   },
 });
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth();
   const { isLoading: entitlementsLoading } = useEntitlements();
   const isLocked = useIsLocked();
@@ -54,7 +55,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (isLocked) return <LockedShell />;
 
-  return <>{children}</>;
+  return <Outlet />;
 }
 
 // Placeholder page used by all four foundation routes. Real Buy Box
@@ -85,58 +86,48 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      <Route
-        path="/overview"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <PlaceholderPage
-                titleKey="buybox.overview.title"
-                descriptionKey="buybox.overview.description"
-              />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/products"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <PlaceholderPage
-                titleKey="buybox.products.title"
-                descriptionKey="buybox.products.description"
-              />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/alerts"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <PlaceholderPage
-                titleKey="buybox.alerts.title"
-                descriptionKey="buybox.alerts.description"
-              />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <PlaceholderPage
-                titleKey="buybox.settings.title"
-                descriptionKey="buybox.settings.description"
-              />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+      <Route element={<ProtectedRoute />}>
+        <Route element={<IntegrationGuard />}>
+          <Route element={<Layout><Outlet /></Layout>}>
+            <Route
+              path="/overview"
+              element={
+                <PlaceholderPage
+                  titleKey="buybox.overview.title"
+                  descriptionKey="buybox.overview.description"
+                />
+              }
+            />
+            <Route
+              path="/products"
+              element={
+                <PlaceholderPage
+                  titleKey="buybox.products.title"
+                  descriptionKey="buybox.products.description"
+                />
+              }
+            />
+            <Route
+              path="/alerts"
+              element={
+                <PlaceholderPage
+                  titleKey="buybox.alerts.title"
+                  descriptionKey="buybox.alerts.description"
+                />
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <PlaceholderPage
+                  titleKey="buybox.settings.title"
+                  descriptionKey="buybox.settings.description"
+                />
+              }
+            />
+          </Route>
+        </Route>
+      </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
