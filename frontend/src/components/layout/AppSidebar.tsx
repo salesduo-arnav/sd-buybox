@@ -47,6 +47,7 @@ import {
 
 const CORE_PLATFORM_URL =
   import.meta.env.VITE_CORE_PLATFORM_URL || "http://app.lvh.me";
+const APP_SLUG = "buybox";
 
 const languages = [
   { code: "en", label: "English", flag: "🇺🇸" },
@@ -186,7 +187,7 @@ export function AppSidebar() {
             <DropdownMenuSeparator className="bg-border/50" />
             <DropdownMenuItem asChild>
               <a
-                href={`${CORE_PLATFORM_URL}/create-organisation`}
+                href={`${CORE_PLATFORM_URL}/create-organisation?app=${APP_SLUG}&redirect=${encodeURIComponent(window.location.origin + location.pathname)}`}
                 className="gap-3 p-2.5 cursor-pointer text-muted-foreground hover:text-foreground focus:text-foreground"
               >
                 <div className="flex h-8 w-8 items-center justify-center rounded-md border border-dashed bg-transparent shadow-none">
@@ -269,6 +270,20 @@ export function AppSidebar() {
                   </DropdownMenuItem>
                 ))
               )}
+              <DropdownMenuSeparator className="bg-border/50" />
+              <DropdownMenuItem asChild>
+                <a
+                  href={`${CORE_PLATFORM_URL}/integration-onboarding?app=${APP_SLUG}&redirect=${encodeURIComponent(window.location.origin + location.pathname)}&orgId=${activeOrganization?.id}`}
+                  className="gap-3 p-2.5 cursor-pointer text-muted-foreground hover:text-foreground focus:text-foreground"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md border border-dashed bg-transparent shadow-none">
+                    <Plus className="h-4 w-4" />
+                  </div>
+                  <div className="font-medium">
+                    {t("nav.addIntegrationAccount", "Add Integration Account")}
+                  </div>
+                </a>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

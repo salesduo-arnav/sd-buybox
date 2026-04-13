@@ -7,7 +7,8 @@
     "overview": "Resumen",
     "products": "Productos",
     "alerts": "Alertas",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "addIntegrationAccount": "Agregar cuenta de integración"
   },
   "landing": {
     "nav": {
