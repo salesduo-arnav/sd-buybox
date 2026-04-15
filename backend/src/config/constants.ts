@@ -3,6 +3,7 @@ export const JOB_NAMES = {
     SCHEDULE_TICK: 'buybox:schedule-tick',
     ACCOUNT_SCAN: 'buybox:account-scan',
     PRODUCT_CHECK: 'buybox:product-check',
+    SCAN_COMPLETION: 'buybox:scan-completion',
     ALERT_DISPATCH: 'buybox:alert-dispatch',
     SNAPSHOT_CLEANUP: 'buybox:snapshot-cleanup',
     CATALOG_SYNC: 'buybox:catalog-sync',
@@ -82,3 +83,45 @@ export const SEVERITIES = {
 } as const;
 
 export type Severity = (typeof SEVERITIES)[keyof typeof SEVERITIES];
+
+// ── Amazon Marketplace IDs ───────────────────────────────────
+export const DEFAULT_MARKETPLACE_IDS: Record<string, string> = {
+    US: 'ATVPDKIKX0DER',
+    CA: 'A2EUQ1WTGCTBG2',
+    MX: 'A1AM78C64UM0Y8',
+    BR: 'A2Q3Y263D00KWC',
+    UK: 'A1F83G8C2ARO7P',
+    DE: 'A1PA6795UKMFR9',
+    FR: 'A13V1IB3VIYZZH',
+    IT: 'APJ6JRA9NG5V4',
+    ES: 'A1RKKUPIHCS9HS',
+    NL: 'A1805IZSGTT6HS',
+    JP: 'A1VC38T7YXB528',
+    AU: 'A39IBJ37TRP1C6',
+};
+
+export const SP_API_ENDPOINTS: Record<string, string> = {
+    NA: 'https://sellingpartnerapi-na.amazon.com',
+    EU: 'https://sellingpartnerapi-eu.amazon.com',
+    FE: 'https://sellingpartnerapi-fe.amazon.com',
+};
+
+// Marketplace → region
+export const DEFAULT_MARKETPLACE_REGIONS: Record<string, keyof typeof SP_API_ENDPOINTS> = {
+    US: 'NA', CA: 'NA', MX: 'NA', BR: 'NA',
+    UK: 'EU', DE: 'EU', FR: 'EU', IT: 'EU', ES: 'EU', NL: 'EU',
+    JP: 'FE', AU: 'FE',
+};
+
+export const DEFAULT_SCAN_BATCH_SIZE = 20;
+
+// When a product's buybox was won by Amazon's own retail arm, we don't
+// treat it as "lost to 3P". This is Amazon's well-known retail seller id.
+export const AMAZON_RETAIL_SELLER_ID = 'ATVPDKIKX0DER';
+
+// Listings report type — the Amazon feed that enumerates every ASIN
+// the seller has live in the given marketplace.
+export const LISTINGS_REPORT_TYPE = 'GET_MERCHANT_LISTINGS_ALL_DATA';
+
+// Snapshot retention default. Used if no tier-based override applies.
+export const DEFAULT_SNAPSHOT_RETENTION_DAYS = 90;

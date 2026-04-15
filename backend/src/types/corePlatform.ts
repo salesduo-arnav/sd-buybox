@@ -47,6 +47,33 @@ export interface IntegrationAccountSummary {
     integration_type: string;
     status: string;
     connected_at?: string;
+    seller_id?: string | null;
+    marketplace_id?: string | null;
+    vendor_codes?: string[] | null;
+}
+
+// Response of GET /internal/integrations/accounts/:id/credentials.
+// `credentials` shape is owned by core-platform.
+export interface IntegrationCredentials {
+    account_id: string;
+    organization_id: string;
+    account_name: string;
+    marketplace: string;
+    region: string;
+    integration_type: string;
+    status: string;
+    seller_id: string | null;
+    marketplace_id: string | null;
+    vendor_codes: string[] | null;
+    connected_at: string | null;
+    credentials: {
+        access_token?: string;
+        refresh_token?: string;
+        expires_in?: number;
+        token_type?: string;
+        obtained_at?: string;
+        selling_partner_id?: string;
+    } | null;
 }
 
 export interface AuditLogEntry {

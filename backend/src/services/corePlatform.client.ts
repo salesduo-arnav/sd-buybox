@@ -7,6 +7,7 @@ import {
     CorePlatformError,
     CorePlatformUser,
     IntegrationAccountSummary,
+    IntegrationCredentials,
     RawEntitlement,
     SessionValidationContext,
     ToolInfo,
@@ -133,6 +134,22 @@ const integrations = {
     async accountBelongsToOrg(accountId: string, organizationId: string): Promise<boolean> {
         const accounts = await integrations.listAccounts(organizationId);
         return accounts.some((account) => account.id === accountId);
+    },
+
+    // Credentials rotate hourly — don't persist the response.
+    async getCredentials(accountId: string): Promise<IntegrationCredentials> {
+        const response = await http().get<IntegrationCredentials>(
+            `/internal/integrations/accounts/${encodeURIComponent(accountId)}/credentials`,
+            { timeout: env.corePlatform.timeoutMs }
+        );
+        return unwrap<IntegrationCredentials>(response.data);
+    },
+
+    async listAllConnected(): Promise<IntegrationAccountSummary[]> {
+        const response = await http().get<IntegrationAccountSummary[]>('/internal/integrations/accounts', {
+            timeout: env.corePlatform.timeoutMs,
+        });
+        return unwrap<IntegrationAccountSummary[]>(response.data) ?? [];
     },
 };
 

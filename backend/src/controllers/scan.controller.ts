@@ -4,8 +4,10 @@ import { corePlatform } from '../services/corePlatform.client';
 import configService from '../services/config.service';
 import { handleError, apiSuccess, apiError } from '../utils/handle_error';
 import { getOrganizationId } from '../utils/request_auth';
-import { SCAN_TRIGGERS, SCAN_STATUSES } from '../config/constants';
+import { JOB_NAMES, SCAN_TRIGGERS, SCAN_STATUSES } from '../config/constants';
 import { entitlements, EntitlementError, LIMIT } from '../services/entitlements';
+import { getBoss } from '../services/job_queue.service';
+import type { AccountScanPayload } from '../services/scan/scan_types';
 
 // Scan Controller
 //
@@ -62,7 +64,15 @@ export const triggerScan = async (req: Request, res: Response) => {
             marketplace,
         });
 
-        // TODO: Enqueue buybox:account-scan job via pg-boss
+        const payload: AccountScanPayload = {
+            scanId: scan.id,
+            accountId,
+            organizationId,
+            marketplace,
+            triggeredBy: SCAN_TRIGGERS.MANUAL,
+        };
+        await getBoss().send(JOB_NAMES.ACCOUNT_SCAN, payload);
+
         return apiSuccess(res, scan, { statusCode: 201 });
     } catch (error) {
         handleError(res, error, 'triggerScan');

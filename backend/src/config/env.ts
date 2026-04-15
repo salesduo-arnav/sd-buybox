@@ -75,6 +75,21 @@ export const env = {
         shutdownTimeoutMs: positiveInt('JOB_QUEUE_SHUTDOWN_TIMEOUT_MS', 10_000),
     },
 
+    spApi: {
+        // Amazon pricing quota is ~1 req/sec per seller — pace under it.
+        rateLimitMs: positiveInt('SP_RATE_LIMIT_MS', 600),
+        requestTimeoutMs: positiveInt('SP_REQUEST_TIMEOUT_MS', 15_000),
+        // Cache creds from core-platform briefly to spare it on hot scans.
+        credsCacheTtlMs: positiveInt('SP_CREDS_CACHE_TTL_MS', 5 * 60 * 1000),
+        reportPollIntervalMs: positiveInt('SP_REPORT_POLL_INTERVAL_MS', 30_000),
+        reportPollTimeoutMs: positiveInt('SP_REPORT_POLL_TIMEOUT_MS', 10 * 60 * 1000),
+    },
+
+    scan: {
+        // Safety-net timer for scans stuck in_progress past product-check retries.
+        completionFallbackMinutes: positiveInt('SCAN_COMPLETION_FALLBACK_MINUTES', 15),
+    },
+
     shutdown: {
         forceExitMs: positiveInt('SHUTDOWN_FORCE_EXIT_MS', 10_000),
     },
